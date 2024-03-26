@@ -13,9 +13,17 @@ socket_bind($sock, "localhost", 6379);
 
 socket_listen($sock, 5);
 
-$conn = socket_accept($sock); // Wait for first client
+$connSocket = socket_accept($sock); // Wait for first client
 
-socket_write($conn, "+PONG\r\n", );
+while ($inputStr = socket_read($connSocket, 1024)) {
+    $inputs = explode("\r\n", $inputStr);
+    foreach ($inputs as $input) {
+        if ($input !== "ping")
+            continue;
+
+        socket_write($connSocket, "+PONG\r\n");
+    }
+}
 
 // socket_close($sock);
 
