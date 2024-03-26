@@ -1,5 +1,10 @@
 <?php
-error_reporting(E_ALL);
+
+namespace app;
+
+use app\RedisLibs\CommandHandler;
+
+require_once 'autoload.php';
 
 echo "Logs from your program will appear here";
 
@@ -27,6 +32,7 @@ if (socket_listen($originSocket, 5) === false) {
 socket_set_nonblock($originSocket);
 
 $socketPool = [];
+$commandHandler = new CommandHandler();
 
 while (true) {
     if ($newSocket = socket_accept($originSocket)) {
@@ -40,21 +46,6 @@ while (true) {
         if (!$inputStr)
             continue;
 
-        $params = [];
-        foreach (explode("\r\n", $inputStr) as $index => $str) {
-            if ($index === 0) continue;
-            if (strpos($str, '$') !== false) continue;
-
-            $params[] = $str;
-        }
-
-        $command = $params[0];
-        if ($command === "ping") {
-            socket_write($socket, "+PONG\r\n");
-        } else if ($command === "echo") {
-            $echoStr = $params[1];
-            $length = strlen($echoStr);
-            socket_write($socket, "$$length\r\n$echoStr\r\n");
-        }
+        socket_write($socket, $commandHandler->handle($inputStr));
     }
 }
