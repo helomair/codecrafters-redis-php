@@ -6,9 +6,14 @@ class CommandHandler {
 
     private string $command;
     private array  $params = [];
+
+    /**
+     * @param DataSet array
+     */
     private array  $keyValues = [];
 
     // public function __construct() {
+
     // }
 
     public function handle(string $input): string {
@@ -60,20 +65,36 @@ class CommandHandler {
     }
 
     private function set(): string {
+        // ! Race condition?
         $key = $this->params[0];
         $value = $this->params[1];
 
-        $this->keyValues[$key] = $value;
+        $expiredAt = -1;
+        if ((count($this->params) > 2) && ($this->params[2] === 'px')) {
+            $nowTime = floor(microtime() * 1000);
+            $expiredAt = $nowTime + intval($this->params[3]);
+        }
+
+        $this->keyValues[$key] = [
+            'value' => $value,
+            'expired_at' => $expiredAt
+        ];
 
         return "+OK\r\n";
     }
 
     private function get(): string {
+        $nowTime = floor(microtime() * 1000);
+
         $key = $this->params[0];
-        $value = $this->keyValues[$key];
+        $data = $this->keyValues[$key];
 
-        $length  = strlen($value);
-
-        return "$$length\r\n$value\r\n";
+        if ($data['expired_at'] != -1 && $data['expired_at'] < $nowTime)
+            return "$-1\r\n";
+        else {
+            $value = $data['value'];
+            $length  = strlen($value);
+            return "$$length\r\n$value\r\n";
+        }
     }
 }
