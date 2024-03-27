@@ -1,8 +1,10 @@
 <?php
 
-namespace app\RedisLibs;
+namespace app\Redis;
 
-class CommandHandler {
+use app\Redis\libs\KeyValues;
+
+class Redis {
 
     private string $command;
     private array  $params = [];
@@ -28,10 +30,10 @@ class CommandHandler {
                 $ret = $this->echo();
                 break;
             case "set":
-                $ret = $this->set();
+                $ret = KeyValues::set($this->params);
                 break;
             case "get":
-                $ret = $this->get();
+                $ret = KeyValues::get($this->params);
                 break;
         }
 
@@ -64,37 +66,37 @@ class CommandHandler {
         return "$$length\r\n$echoStr\r\n";
     }
 
-    private function set(): string {
-        // ! Race condition?
-        $key = $this->params[0];
-        $value = $this->params[1];
+    // private function set(): string {
+    //     // ! Race condition?
+    //     $key = $this->params[0];
+    //     $value = $this->params[1];
 
-        $expiredAt = -1;
-        if ((count($this->params) > 2) && ($this->params[2] === 'px')) {
-            $nowTime = floor(microtime() * 1000);
-            $expiredAt = $nowTime + intval($this->params[3]);
-        }
+    //     $expiredAt = -1;
+    //     if ((count($this->params) > 2) && ($this->params[2] === 'px')) {
+    //         $nowTime = floor(microtime() * 1000);
+    //         $expiredAt = $nowTime + intval($this->params[3]);
+    //     }
 
-        $this->keyValues[$key] = [
-            'value' => $value,
-            'expired_at' => $expiredAt
-        ];
+    //     $this->keyValues[$key] = [
+    //         'value' => $value,
+    //         'expired_at' => $expiredAt
+    //     ];
 
-        return "+OK\r\n";
-    }
+    //     return "+OK\r\n";
+    // }
 
-    private function get(): string {
-        $nowTime = floor(microtime() * 1000);
+    // private function get(): string {
+    //     $nowTime = floor(microtime() * 1000);
 
-        $key = $this->params[0];
-        $data = $this->keyValues[$key];
+    //     $key = $this->params[0];
+    //     $data = $this->keyValues[$key];
 
-        if ($data['expired_at'] != -1 && $data['expired_at'] < $nowTime)
-            return "$-1\r\n";
-        else {
-            $value = $data['value'];
-            $length  = strlen($value);
-            return "$$length\r\n$value\r\n";
-        }
-    }
+    //     if ($data['expired_at'] != -1 && $data['expired_at'] < $nowTime)
+    //         return "$-1\r\n";
+    //     else {
+    //         $value = $data['value'];
+    //         $length  = strlen($value);
+    //         return "$$length\r\n$value\r\n";
+    //     }
+    // }
 }

@@ -2,7 +2,7 @@
 
 namespace app;
 
-use app\RedisLibs\CommandHandler;
+use app\Redis\Redis;
 
 require_once 'autoload.php';
 
@@ -32,7 +32,7 @@ if (socket_listen($originSocket, 5) === false) {
 socket_set_nonblock($originSocket);
 
 $socketPool = [];
-$commandHandler = new CommandHandler();
+$redis = new Redis();
 
 while (true) {
     if ($newSocket = socket_accept($originSocket)) {
@@ -46,6 +46,6 @@ while (true) {
         if (!$inputStr)
             continue;
 
-        socket_write($socket, $commandHandler->handle($inputStr));
+        socket_write($socket, $redis->handle($inputStr));
     }
 }
