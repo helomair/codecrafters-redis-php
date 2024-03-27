@@ -7,8 +7,13 @@ use app\Redis\libs\KeyValues;
 
 class Redis {
 
+    private string $role;
     private string $command;
     private array  $params = [];
+
+    public function __construct(string $role) {
+        $this->role = $role;
+    }
 
     public function handle(string $input): string {
         $this->parseInputString($input);
@@ -82,6 +87,6 @@ class Redis {
     }
 
     private function infos(): string {
-        return Helpers::makeBulkString("role:master");
+        return Helpers::makeBulkString("role:{$this->role}");
     }
 }

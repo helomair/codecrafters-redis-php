@@ -33,21 +33,28 @@ function makeOriginSocket(int $port) {
 }
 
 function main (int $argc, array $argv) {
+    $settings = [
+        'port' => 6379,
+        'role' => "master"
+    ];
 
-    $port = 6379;
-    for ($i = 1; $i < $argc; $i += 2) {
-        if ($argv[$i] === '--port') {
-            $port = intval($argv[$i + 1]);
-            break;
+    for ($i = 1; $i < $argc; $i++) {
+        switch ($argv[$i]) {
+            case '--port':
+                $settings['port'] = intval($argv[ ++$i ]);
+                break;
+            case '--replicaof':
+                $settings['role'] = "slave";
+                break;
         }
     }
 
 
-    $originSocket = makeOriginSocket($port);
+    $originSocket = makeOriginSocket($settings['port']);
     socket_set_nonblock($originSocket);
 
     $socketPool = [];
-    $redis = new Redis();
+    $redis = new Redis($settings['role']);
     
     while (true) {
         if ($newSocket = socket_accept($originSocket)) {
