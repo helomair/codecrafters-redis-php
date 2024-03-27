@@ -2,6 +2,7 @@
 
 namespace app\Redis;
 
+use app\Helpers\Helpers;
 use app\Redis\libs\KeyValues;
 
 class Redis {
@@ -25,6 +26,9 @@ class Redis {
                 break;
             case "get":
                 $ret = $this->get();
+                break;
+            case "INFO":
+                $ret = $this->infos();
                 break;
         }
 
@@ -54,9 +58,7 @@ class Redis {
 
     private function echo(): string {
         $echoStr = $this->params[0];
-        $length  = strlen($echoStr);
-
-        return "$$length\r\n$echoStr\r\n";
+        return Helpers::makeBulkString($echoStr);
     }
 
     private function set(): string {
@@ -77,5 +79,9 @@ class Redis {
 
     private function get(): string {
         return KeyValues::get($this->params[0]);
+    }
+
+    private function infos(): string {
+        return Helpers::makeBulkString("role:master");
     }
 }

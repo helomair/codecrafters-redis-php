@@ -2,6 +2,8 @@
 
 namespace app\Redis\libs;
 
+use app\Helpers\Helpers;
+
 class KeyValues {
     /**
      * @param DataSet
@@ -15,14 +17,12 @@ class KeyValues {
     }
 
     public static function get(string $key) {
-        $dataSet = static::$keyValue[$key];
+        $dataSet = static::$keyValue[$key] ?? null;
 
-        if ($dataSet->isExpired())
+        if (empty($dataSet) || $dataSet->isExpired())
             return "$-1\r\n";
         else {
-            $value = $dataSet->getValue();
-            $length = strlen($value);
-            return "$$length\r\n$value\r\n";
+            return Helpers::makeBulkString( $dataSet->getValue() );
         }
     }
 }
