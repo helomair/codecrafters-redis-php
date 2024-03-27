@@ -8,24 +8,13 @@ class KeyValues {
      */
     private static array $keyValue = [];
 
-    public static function set(array $params) {
+    public static function set(string $key, string $value, int $expiredAt = -1) {
         // ! Race condition?
-        $key = $params[0];
-        $value = $params[1];
-
-        $expiredAt = -1;
-        if ((count($params) > 2) && ($params[2] === 'px')) {
-            $nowTime = microtime(true) * 1000;
-            $expiredAt = $nowTime + intval($params[3]);
-        }
-
         static::$keyValue[$key] = new DataSet($value, $expiredAt);
-
         return "+OK\r\n";
     }
 
-    public static function get(array $params) {
-        $key = $params[0];
+    public static function get(string $key) {
         $dataSet = static::$keyValue[$key];
 
         if ($dataSet->isExpired())
