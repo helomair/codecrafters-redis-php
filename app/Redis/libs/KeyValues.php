@@ -12,17 +12,17 @@ class KeyValues {
 
     public static function set(string $key, string $value, int $expiredAt = -1) {
         // ! Race condition?
-        static::$keyValue[$key] = new DataSet($value, $expiredAt);
-        return "+OK\r\n";
+        self::$keyValue[$key] = new DataSet($value, $expiredAt);
+        return Encoder::encodeSimpleString("OK");
     }
 
     public static function get(string $key) {
-        $dataSet = static::$keyValue[$key] ?? null;
+        $dataSet = self::$keyValue[$key] ?? null;
 
         if (empty($dataSet) || $dataSet->isExpired())
-            return "$-1\r\n";
+            return Encoder::nullString();
         else {
-            return Helpers::makeBulkString( $dataSet->getValue() );
+            return Encoder::encodeBulkString( $dataSet->getValue() );
         }
     }
 }

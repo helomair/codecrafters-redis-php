@@ -2,17 +2,18 @@
 
 namespace app\Redis;
 
-use app\Helpers\Helpers;
+use app\Redis\libs\Helper;
+use app\Redis\libs\Encoder;
 use app\Redis\libs\KeyValues;
 
 class Redis {
-
-    private string $role;
     private string $command;
+
     private array  $params = [];
 
-    public function __construct(string $role) {
-        $this->role = $role;
+    public function __construct() {
+        Config::set('master_replid', Helper::generateRandomString(40));
+        Config::set('master_repl_offset', '0');
     }
 
     public function handle(string $input): string {
@@ -58,12 +59,12 @@ class Redis {
     }
 
     private function ping(): string {
-        return "+PONG\r\n";
+        return Encoder::encodeSimpleString("PONG");
     }
 
     private function echo(): string {
         $echoStr = $this->params[0];
-        return Helpers::makeBulkString($echoStr);
+        return Encoder::encodeSimpleString($echoStr);
     }
 
     private function set(): string {
@@ -79,7 +80,7 @@ class Redis {
 
         KeyValues::set($key, $value, $expiredAt);
 
-        return "+OK\r\n";
+        return Encoder::encodeSimpleString("OK");
     }
 
     private function get(): string {
@@ -87,6 +88,6 @@ class Redis {
     }
 
     private function infos(): string {
-        return Helpers::makeBulkString("role:{$this->role}");
+        return Encoder::encodeMultipleBulkStrings(Config::getAll());
     }
 }

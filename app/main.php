@@ -3,6 +3,7 @@
 namespace app;
 
 use app\Redis\Redis;
+use app\Redis\Config;
 
 require_once 'autoload.php';
 
@@ -32,46 +33,31 @@ function makeOriginSocket(int $port) {
     return $socket;
 }
 
-function main (int $argc, array $argv) {
-    $settings = [
-        'port' => 6379,
-        'role' => "master"
-    ];
+$opt = getopt('', ['port:', 'replicaof:']);
+$port = $opt['port'] ?? 6379;
 
-    for ($i = 1; $i < $argc; $i++) {
-        switch ($argv[$i]) {
-            case '--port':
-                $settings['port'] = intval($argv[ ++$i ]);
-                break;
-            case '--replicaof':
-                $settings['role'] = "slave";
-                break;
-        }
+$role = isset($opt['replicaof']) ? 'slave' : 'master';
+Config::set('role', $role);
+
+$originSocket = makeOriginSocket($port);
+socket_set_nonblock($originSocket);
+
+$socketPool = [];
+$redis = new Redis();
+
+while (true) {
+    if ($newSocket = socket_accept($originSocket)) {
+        $socketPool[] = $newSocket;
+        socket_set_nonblock($newSocket);
     }
 
+    foreach ($socketPool as $index => $socket) {
+        $inputStr = socket_read($socket, 1024);
 
-    $originSocket = makeOriginSocket($settings['port']);
-    socket_set_nonblock($originSocket);
+        if (!$inputStr)
+            continue;
 
-    $socketPool = [];
-    $redis = new Redis($settings['role']);
-    
-    while (true) {
-        if ($newSocket = socket_accept($originSocket)) {
-            $socketPool[] = $newSocket;
-            socket_set_nonblock($newSocket);
-        }
-    
-        foreach ($socketPool as $index => $socket) {
-            $inputStr = socket_read($socket, 1024);
-    
-            if (!$inputStr)
-                continue;
-    
-            socket_write($socket, $redis->handle($inputStr));
-        }
+        socket_write($socket, $redis->handle($inputStr));
     }
-    // socket_close($originSocket);
 }
-
-main($argc, $argv);
+// socket_close($originSocket);
