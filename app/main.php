@@ -33,11 +33,26 @@ function makeOriginSocket(int $port) {
     return $socket;
 }
 
-$opt = getopt('', ['port:', 'replicaof:']);
-$port = $opt['port'] ?? 6379;
+$port = 6379;
+Config::set('role', 'master');
 
-$role = isset($opt['replicaof']) ? 'slave' : 'master';
-Config::set('role', $role);
+for($i = 1; $i < $argc; $i++) {
+    $arg = $argv[$i];
+    switch ($arg) {
+        case '--port':
+            $port = intval($argv[ ++$i ]);
+            break;
+        case '--replicaof':
+            Config::set('role', 'slave');
+            Config::set('master_host', $argv[ ++$i ]);
+            Config::set('master_port', $argv[ ++$i ]);
+            break;
+    }
+}
+
+print_r("Configs: \n\n");
+print_r(Config::getAll());
+print_r("\n\n");
 
 $originSocket = makeOriginSocket($port);
 socket_set_nonblock($originSocket);

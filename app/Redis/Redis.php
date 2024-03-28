@@ -14,6 +14,8 @@ class Redis {
     public function __construct() {
         Config::set('master_replid', Helper::generateRandomString(40));
         Config::set('master_repl_offset', '0');
+
+        $this->slaveHandshake();
     }
 
     public function handle(string $input): string {
@@ -41,6 +43,33 @@ class Redis {
         return $ret;
     }
 
+
+    private function slaveHandshake() {
+        if (Config::get('role') !== 'slave')
+            return;
+
+        $masterHost = Config::get('master_host');
+        $masterPort = intval(Config::get('master_port'));
+
+        if (empty($masterHost) || empty($masterPort)) {
+            echo "Role is slave but master host or port not provided" . PHP_EOL;
+            return;
+        }
+
+        // PING to master
+        if (($socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)) === false) {
+            echo "socket_create() failed in slaveHandShake : " . socket_strerror(socket_last_error()) . PHP_EOL;
+            exit(1);
+        }
+
+        if (!socket_connect($socket, $masterHost, $masterPort)) {
+            echo "socket_connect() failed in slaveHandShake : " . socket_strerror(socket_last_error()) . PHP_EOL;
+        } else {
+            $message = Encoder::encodeArrayString(['ping']);
+            socket_write($socket, $message);
+            socket_close($socket);
+        }
+    }
 
 
     private function parseInputString(string $input): void {
@@ -88,6 +117,6 @@ class Redis {
     }
 
     private function infos(): string {
-        return Encoder::encodeMultipleBulkStrings(Config::getAll());
+        return Encoder::encodeKeyValueBulkStrings(Config::getAll());
     }
 }
