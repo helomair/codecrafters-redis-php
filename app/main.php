@@ -9,7 +9,8 @@ require_once 'autoload.php';
 
 echo "Logs from your program will appear here";
 
-function makeOriginSocket(int $port) {
+function makeOriginSocket() {
+    $port = Config::get('port');
     if (($socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)) === false) {
         echo "socket_create() failed : " . socket_strerror(socket_last_error()) . PHP_EOL;
         exit(1);
@@ -33,14 +34,15 @@ function makeOriginSocket(int $port) {
     return $socket;
 }
 
-$port = 6379;
+# Default
+Config::set('port', '6379');
 Config::set('role', 'master');
 
 for($i = 1; $i < $argc; $i++) {
     $arg = $argv[$i];
     switch ($arg) {
         case '--port':
-            $port = intval($argv[ ++$i ]);
+            Config::set('port', $argv[ ++$i ]);
             break;
         case '--replicaof':
             Config::set('role', 'slave');
@@ -54,7 +56,7 @@ print_r("Configs: \n\n");
 print_r(Config::getAll());
 print_r("\n\n");
 
-$originSocket = makeOriginSocket($port);
+$originSocket = makeOriginSocket();
 socket_set_nonblock($originSocket);
 
 $socketPool = [];

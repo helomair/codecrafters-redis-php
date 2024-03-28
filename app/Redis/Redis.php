@@ -65,8 +65,21 @@ class Redis {
         if (!socket_connect($socket, $masterHost, $masterPort)) {
             echo "socket_connect() failed in slaveHandShake : " . socket_strerror(socket_last_error()) . PHP_EOL;
         } else {
+            # Step1: ping
             $message = Encoder::encodeArrayString(['ping']);
             socket_write($socket, $message);
+            $firstStepResponse = socket_read($socket, 1024);
+
+            # Step2: REPLCONF listening-port <PORT>
+            $message = Encoder::encodeArrayString(['REPLCONF', 'listening-port', Config::get('port')]);
+            socket_write($socket, $message);
+            $secondStepResponse = socket_read($socket, 1024);
+
+            # Step3: REPLCONF capa psync2
+            $message = Encoder::encodeArrayString(['REPLCONF', 'capa', 'psync2']);
+            socket_write($socket, $message);
+            $thridStepResponse = socket_read($socket, 1024);
+
             socket_close($socket);
         }
     }
