@@ -80,6 +80,11 @@ class Redis {
             socket_write($socket, $message);
             $thridStepResponse = socket_read($socket, 1024);
 
+            # Step4: First connection, PSYNC ? -1, (PSYNC <replication ID> <offset>)
+            $message = Encoder::encodeArrayString(['PSYNC', '?', '-1']);
+            socket_write($socket, $message);
+            $forthStepResponse = socket_read($socket, 1024);
+
             socket_close($socket);
         }
     }
