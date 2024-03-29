@@ -11,10 +11,9 @@ class Redis {
 
     private array  $params = [];
 
-    public function handle(string $input): string {
+    public function handle(string $input): array {
         $this->parseInputString($input);
 
-        $ret = "";
         switch ($this->command) {
             case "PING":
                 $ret = $this->ping();
@@ -36,6 +35,9 @@ class Redis {
                 break;
             case "PSYNC":
                 $ret = $this->psync();
+                break;
+            default:
+                $ret = [];
         }
 
         return $ret;
@@ -56,16 +58,16 @@ class Redis {
         }
     }
 
-    private function ping(): string {
-        return Encoder::encodeSimpleString("PONG");
+    private function ping(): array {
+        return [Encoder::encodeSimpleString("PONG")];
     }
 
-    private function echo(): string {
+    private function echo(): array {
         $echoStr = $this->params[0];
-        return Encoder::encodeSimpleString($echoStr);
+        return [Encoder::encodeSimpleString($echoStr)];
     }
 
-    private function set(): string {
+    private function set(): array {
         // ! Race condition?
         $key = $this->params[0];
         $value = $this->params[1];
@@ -78,24 +80,30 @@ class Redis {
 
         KeyValues::set($key, $value, $expiredAt);
 
-        return Encoder::encodeSimpleString("OK");
+        return [Encoder::encodeSimpleString("OK")];
     }
 
-    private function get(): string {
-        return KeyValues::get($this->params[0]);
+    private function get(): array {
+        return [KeyValues::get($this->params[0])];
     }
 
-    private function infos(): string {
-        return Encoder::encodeKeyValueBulkStrings(Config::getAll());
+    private function infos(): array {
+        return [Encoder::encodeKeyValueBulkStrings(Config::getAll())];
     }
 
-    private function replconf(): string {
-        return Encoder::encodeSimpleString("OK");
+    private function replconf(): array {
+        return [Encoder::encodeSimpleString("OK")];
     }
 
-    private function psync(): string {
+    private function psync(): array {
         $replid = Config::get('master_replid');
         $offset = Config::get('master_repl_offset');
-        return Encoder::encodeSimpleString("FULLRESYNC {$replid} {$offset}");
+
+        $fullSync = Encoder::encodeSimpleString("FULLRESYNC {$replid} {$offset}");
+
+        $fileContent = "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==";
+        $fullSyncFile = Encoder::encodeFileString(base64_decode($fileContent));
+
+        return [$fullSync, $fullSyncFile];
     }
 }

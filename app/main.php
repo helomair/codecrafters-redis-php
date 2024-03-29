@@ -70,6 +70,8 @@ socket_set_nonblock($originSocket);
 $socketPool = [];
 $redis = new Redis();
 
+// print_r($redis->handle("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"));
+
 while (true) {
     if ($newSocket = socket_accept($originSocket)) {
         $socketPool[] = $newSocket;
@@ -82,7 +84,10 @@ while (true) {
         if (!$inputStr)
             continue;
 
-        socket_write($socket, $redis->handle($inputStr));
+        $responses = $redis->handle($inputStr);
+        foreach($responses as $response) {
+            socket_write($socket, $response);
+        }
     }
 }
 // socket_close($originSocket);

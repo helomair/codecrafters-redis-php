@@ -4,6 +4,11 @@ namespace app\Redis\libs;
 
 class Encoder {
 
+    public static function encodeFileString(string $fileContent): string {
+        $length = strlen($fileContent);
+        return "$" . "{$length}\r\n{$fileContent}";
+    }
+
     public static function encodeArrayString(array $datas): string {
         $counts = count($datas);
 
