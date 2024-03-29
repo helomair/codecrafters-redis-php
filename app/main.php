@@ -3,18 +3,26 @@
 namespace app;
 
 use app\Redis\Redis;
-use app\Redis\Config;
-use app\Redis\libs\SlaveHandshake;
+use app\Config;
+use app\Redis\slave\SlaveHandshake;
 
 require_once 'autoload.php';
 
 echo "Logs from your program will appear here";
 
-const MASTER_ROLE = 'master';
-const SLAVE_ROLE = 'slave';
+define('MASTER_ROLE', 'master');
+define('SLAVE_ROLE', 'slave');
+
+define('KEY_REPLICA_CONNS', 'replica_connections');
+define('KEY_SELF_PORT', 'port');
+define('KEY_SELF_ROLE', 'role');
+define('KEY_MASTER_REPLID', 'master_replid');
+define('KEY_MASTER_REPL_OFFSET', 'master_repl_offset');
+define('KEY_MASTER_HOST', 'master_host');
+define('KEY_MASTER_PORT', 'master_port');
 
 function makeOriginSocket() {
-    $port = Config::get('port');
+    $port = intval(Config::getString(KEY_SELF_PORT));
     if (($socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)) === false) {
         echo "socket_create() failed : " . socket_strerror(socket_last_error()) . PHP_EOL;
         exit(1);
@@ -39,21 +47,21 @@ function makeOriginSocket() {
 }
 
 # Default
-Config::set('port', '6379');
-Config::set('role', MASTER_ROLE);
-Config::set('master_replid', bin2hex(random_bytes(40)) );
-Config::set('master_repl_offset', '0');
+Config::setString(KEY_SELF_PORT, '6379');
+Config::setString(KEY_SELF_ROLE, MASTER_ROLE);
+Config::setString(KEY_MASTER_REPLID, bin2hex(random_bytes(40)) );
+Config::setString(KEY_MASTER_REPL_OFFSET, '0');
 
 for($i = 1; $i < $argc; $i++) {
     $arg = $argv[$i];
     switch ($arg) {
         case '--port':
-            Config::set('port', $argv[ ++$i ]);
+            Config::setString(KEY_SELF_PORT, $argv[ ++$i ]);
             break;
         case '--replicaof':
-            Config::set('role', SLAVE_ROLE);
-            Config::set('master_host', $argv[ ++$i ]);
-            Config::set('master_port', $argv[ ++$i ]);
+            Config::setString(KEY_SELF_ROLE, SLAVE_ROLE);
+            Config::setString(KEY_MASTER_HOST, $argv[ ++$i ]);
+            Config::setString(KEY_MASTER_PORT, $argv[ ++$i ]);
             break;
     }
 }
@@ -84,7 +92,7 @@ while (true) {
         if (!$inputStr)
             continue;
 
-        $responses = $redis->handle($inputStr);
+        $responses = $redis->handle($inputStr, $socket);
         foreach($responses as $response) {
             socket_write($socket, $response);
         }

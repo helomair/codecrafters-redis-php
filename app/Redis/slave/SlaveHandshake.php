@@ -1,19 +1,17 @@
 <?php
 
-namespace app\Redis\libs;
+namespace app\Redis\slave;
 
-use app\Redis\Config;
+use app\Config;
 use app\Redis\libs\Encoder;
-
-use const app\SLAVE_ROLE;
 
 class SlaveHandshake {
     public static function start() {
-        if (Config::get('role') !== SLAVE_ROLE)
+        if (Config::getString(KEY_SELF_ROLE) !== SLAVE_ROLE)
             return;
 
-        $masterHost = Config::get('master_host');
-        $masterPort = intval(Config::get('master_port'));
+        $masterHost = Config::getString(KEY_MASTER_HOST);
+        $masterPort = intval(Config::getString(KEY_MASTER_PORT));
 
         if (empty($masterHost) || empty($masterPort)) {
             echo "Role is slave but master host or port not provided" . PHP_EOL;
@@ -32,7 +30,7 @@ class SlaveHandshake {
             self::sendToMaster($socket, ['ping']);
 
             # Step2: REPLCONF listening-port <PORT>
-            self::sendToMaster($socket, ['REPLCONF', 'listening-port', Config::get('port')]);
+            self::sendToMaster($socket, ['REPLCONF', 'listening-port', Config::getString(KEY_SELF_PORT)]);
 
             # Step3: REPLCONF capa psync2
             self::sendToMaster($socket, ['REPLCONF', 'capa', 'psync2']);

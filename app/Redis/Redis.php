@@ -2,17 +2,21 @@
 
 namespace app\Redis;
 
-use app\Redis\libs\Helper;
+use app\Config;
 use app\Redis\libs\Encoder;
 use app\Redis\libs\KeyValues;
+use app\Redis\master\MasterPropagate;
 
 class Redis {
-    private string $command;
+    private string $command = "";
 
     private array  $params = [];
+    private $requestedSocket;
+    private const WRITE_COMMANDS = ['SET', 'DEL'];
 
-    public function handle(string $input): array {
+    public function handle(string $input, $requestedSocket): array {
         $this->parseInputString($input);
+        $this->requestedSocket = $requestedSocket;
 
         switch ($this->command) {
             case "PING":
@@ -40,10 +44,17 @@ class Redis {
                 $ret = [];
         }
 
+        if (in_array($this->command, self::WRITE_COMMANDS)) {
+            MasterPropagate::sendParamsToSlave($this->command, $this->params);
+        }
+
         return $ret;
     }
 
     private function parseInputString(string $input): void {
+        $this->command = "";
+        $this->params = [];
+
         $data = explode("\r\n", $input);
         $this->command = strtoupper($data[2]);
 
@@ -88,16 +99,30 @@ class Redis {
     }
 
     private function infos(): array {
-        return [Encoder::encodeKeyValueBulkStrings(Config::getAll())];
+        return [Encoder::encodeKeyValueBulkStrings(Config::getAllStrings())];
     }
 
     private function replconf(): array {
-        return [Encoder::encodeSimpleString("OK")];
+        $ret = [Encoder::encodeSimpleString("OK")];
+
+        if ($this->params[0] !== 'listening-port') {
+            return $ret;
+        }
+
+        $slavePort = $this->params[1];
+        $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
+
+        if (empty($slaveConns[$slavePort])) {
+            $slaveConns[$slavePort] = $this->requestedSocket;
+            Config::setArray(KEY_REPLICA_CONNS, $slaveConns);
+        }
+
+        return $ret;
     }
 
     private function psync(): array {
-        $replid = Config::get('master_replid');
-        $offset = Config::get('master_repl_offset');
+        $replid = Config::getString(KEY_MASTER_REPLID);
+        $offset = Config::getString(KEY_MASTER_REPL_OFFSET);
 
         $fullSync = Encoder::encodeSimpleString("FULLRESYNC {$replid} {$offset}");
 
