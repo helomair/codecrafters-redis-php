@@ -41,6 +41,8 @@ function makeOriginSocket() {
 # Default
 Config::set('port', '6379');
 Config::set('role', MASTER_ROLE);
+Config::set('master_replid', bin2hex(random_bytes(40)) );
+Config::set('master_repl_offset', '0');
 
 for($i = 1; $i < $argc; $i++) {
     $arg = $argv[$i];

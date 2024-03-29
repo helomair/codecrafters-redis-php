@@ -11,11 +11,6 @@ class Redis {
 
     private array  $params = [];
 
-    public function __construct() {
-        Config::set('master_replid', Helper::generateRandomString(40));
-        Config::set('master_repl_offset', '0');
-    }
-
     public function handle(string $input): string {
         $this->parseInputString($input);
 
@@ -38,6 +33,9 @@ class Redis {
                 break;
             case "REPLCONF":
                 $ret = $this->replconf();
+                break;
+            case "PSYNC":
+                $ret = $this->psync();
         }
 
         return $ret;
@@ -93,5 +91,11 @@ class Redis {
 
     private function replconf(): string {
         return Encoder::encodeSimpleString("OK");
+    }
+
+    private function psync(): string {
+        $replid = Config::get('master_replid');
+        $offset = Config::get('master_repl_offset');
+        return Encoder::encodeSimpleString("FULLRESYNC {$replid} {$offset}");
     }
 }
