@@ -8,9 +8,10 @@ use app\Redis\libs\KeyValues;
 use app\Redis\master\MasterPropagate;
 
 class Redis {
-    private string $command = "";
+    private array $inputArguments = [];
 
     private array  $params = [];
+    private string $command = "";
     private $requestedSocket;
     private const WRITE_COMMANDS = ['SET', 'DEL'];
 
@@ -18,55 +19,72 @@ class Redis {
         $this->parseInputString($input);
         $this->requestedSocket = $requestedSocket;
 
-        switch ($this->command) {
-            case "PING":
-                $ret = $this->ping();
-                break;
-            case "ECHO":
-                $ret = $this->echo();
-                break;
-            case "SET":
-                $ret = $this->set();
-                break;
-            case "GET":
-                $ret = $this->get();
-                break;
-            case "INFO":
-                $ret = $this->infos();
-                break;
-            case "REPLCONF":
-                $ret = $this->replconf();
-                break;
-            case "PSYNC":
-                $ret = $this->psync();
-                break;
-            default:
-                $ret = [];
-        }
-
-        if (in_array($this->command, self::WRITE_COMMANDS)) {
-            MasterPropagate::sendParamsToSlave($this->command, $this->params);
+        $ret = [];
+        foreach($this->inputArguments as $arg) {
+            $this->command = strtoupper($arg[0]);
+            $this->params = array_slice($arg, 1) ?? [];
+            switch ($this->command) {
+                case "PING":
+                    $ret = $this->ping();
+                    break;
+                case "ECHO":
+                    $ret = $this->echo();
+                    break;
+                case "SET":
+                    $ret = $this->set();
+                    break;
+                case "GET":
+                    $ret = $this->get();
+                    break;
+                case "INFO":
+                    $ret = $this->infos();
+                    break;
+                case "REPLCONF":
+                    $ret = $this->replconf();
+                    break;
+                case "PSYNC":
+                    $ret = $this->psync();
+                    break;
+                default:
+                    $ret = [];
+            }
+    
+            if (in_array($this->command, self::WRITE_COMMANDS)) {
+                $ret = Config::isMaster() ? $ret : [];
+                MasterPropagate::sendParamsToSlave($this->command, $this->params);
+            }
         }
 
         return $ret;
     }
 
-    private function parseInputString(string $input): void {
-        $this->command = "";
-        $this->params = [];
+    private function parseInputString(string $inputStr): void {
+        $this->inputArguments = [];
 
-        $data = explode("\r\n", $input);
-        $this->command = strtoupper($data[2]);
+        $inputs = explode("\r\n", $inputStr);
+        $length = count($inputs);
+        
+        for($i = 0; $i < $length; $i++) {
+            $this->parseInputStringVerifyArgs($inputs, $i);
+        }
+    }
 
-        if (count($data) <= 3)
+    private function parseInputStringVerifyArgs(array &$inputs, int &$i) {
+        $RESPArrayLength = $inputs[$i];
+        if( ($pos = strpos($RESPArrayLength, '*')) === false)
             return;
 
-        foreach (array_slice($data, 3) as $param) {
-            if (empty($param)) continue;
-            if (strpos($param, '$') !== false) continue;
+        $RESPArrayLength = intval(substr($RESPArrayLength, $pos + 1));
+        $args = [];
+        while($RESPArrayLength > 0) {
+            $arg = $inputs[ ++$i ];
+            
+            if (strpos($arg, '$') !== false) continue;
 
-            $this->params[] = $param;
+            $args[] = $arg;
+            $RESPArrayLength --;
         }
+        $this->inputArguments[] = $args;
     }
 
     private function ping(): array {
@@ -90,7 +108,6 @@ class Redis {
         }
 
         KeyValues::set($key, $value, $expiredAt);
-
         return [Encoder::encodeSimpleString("OK")];
     }
 

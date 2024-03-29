@@ -16,7 +16,7 @@ class KeyValues {
         return Encoder::encodeSimpleString("OK");
     }
 
-    public static function get(string $key) {
+    public static function get(string $key): string {
         $dataSet = self::$keyValue[$key] ?? null;
 
         if (empty($dataSet) || $dataSet->isExpired())

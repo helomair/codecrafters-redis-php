@@ -7,8 +7,8 @@ use app\Redis\libs\Encoder;
 
 class SlaveHandshake {
     public static function start() {
-        if (Config::getString(KEY_SELF_ROLE) !== SLAVE_ROLE)
-            return;
+        if (Config::isMaster())
+            return null;
 
         $masterHost = Config::getString(KEY_MASTER_HOST);
         $masterPort = intval(Config::getString(KEY_MASTER_PORT));
@@ -38,8 +38,15 @@ class SlaveHandshake {
             # Step4: First connection, PSYNC ? -1, (PSYNC <replication ID> <offset>)
             self::sendToMaster($socket, ['PSYNC', '?', '-1']);
 
-            socket_close($socket);
+            # Step5: Receive RDB file.
+            $RDBFileContent = socket_read($socket, 1024);
+
+            socket_set_nonblock($socket);
+
+            return $socket;
         }
+
+        return null;
     }
 
     private static function sendToMaster($socket, array $texts): string {

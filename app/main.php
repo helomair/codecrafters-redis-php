@@ -2,8 +2,9 @@
 
 namespace app;
 
-use app\Redis\Redis;
 use app\Config;
+use app\Redis\Redis;
+use app\Redis\libs\KeyValues;
 use app\Redis\slave\SlaveHandshake;
 
 require_once 'autoload.php';
@@ -21,7 +22,7 @@ define('KEY_MASTER_REPL_OFFSET', 'master_repl_offset');
 define('KEY_MASTER_HOST', 'master_host');
 define('KEY_MASTER_PORT', 'master_port');
 
-function makeOriginSocket() {
+function makeSelfListeningSocket() {
     $port = intval(Config::getString(KEY_SELF_PORT));
     if (($socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)) === false) {
         echo "socket_create() failed : " . socket_strerror(socket_last_error()) . PHP_EOL;
@@ -70,29 +71,38 @@ print_r("Configs: \n\n");
 print_r(Config::getAll());
 print_r("\n\n");
 
-SlaveHandshake::start();
+$selfListeningSocket = makeSelfListeningSocket();
+socket_set_nonblock($selfListeningSocket);
 
-$originSocket = makeOriginSocket();
-socket_set_nonblock($originSocket);
+$slaveToMasterSocket = Config::isMaster() ? null : SlaveHandshake::start();
 
-$socketPool = [];
+$socketPool = !is_null($slaveToMasterSocket) ? [$slaveToMasterSocket] : [];
 $redis = new Redis();
 
 // print_r($redis->handle("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"));
 
 while (true) {
-    if ($newSocket = socket_accept($originSocket)) {
+    if ( $newSocket = socket_accept($selfListeningSocket) ) {
         $socketPool[] = $newSocket;
         socket_set_nonblock($newSocket);
     }
 
+    $infos = [];
     foreach ($socketPool as $index => $socket) {
         $inputStr = socket_read($socket, 1024);
+        if (!empty($inputStr)) {
+            $infos[] = [$inputStr, $socket];
+        }
+    }
 
-        if (!$inputStr)
+    foreach ($infos as $inputStrAndSocket) {
+        if (!$inputStrAndSocket)
             continue;
 
+        $inputStr = $inputStrAndSocket[0];
+        $socket = $inputStrAndSocket[1];
         $responses = $redis->handle($inputStr, $socket);
+
         foreach($responses as $response) {
             socket_write($socket, $response);
         }

@@ -5,6 +5,10 @@ namespace app;
 class Config {
     private static array $configs = [];
 
+    public static function isMaster(): bool {
+        return Config::getString(KEY_SELF_ROLE) === MASTER_ROLE;
+    }
+
     public static function getAll(): array {
         return self::$configs;
     }
@@ -44,23 +48,4 @@ class Config {
     public static function setString(string $key, string $value): void {
         self::$configs[$key] = $value;
     }
-    // public static function getAll(): array {
-    //     return self::$configs;
-    // }
-
-    // public static function get(string $key): string {
-    //     return self::$configs[$key][0] ?? "";
-    // }
-
-    // public static function getArray(string $key): array {
-    //     return self::$configs[$key] ?? [];
-    // }
-
-    // public static function set(string $key, string $value): void {
-    //     self::$configs[$key] = [$value];
-    // }
-
-    // public static function setArray(string $key, array $values): void {
-    //     self::$configs[$key] = $values;
-    // }
 }
