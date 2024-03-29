@@ -4,10 +4,14 @@ namespace app;
 
 use app\Redis\Redis;
 use app\Redis\Config;
+use app\Redis\libs\SlaveHandshake;
 
 require_once 'autoload.php';
 
 echo "Logs from your program will appear here";
+
+const MASTER_ROLE = 'master';
+const SLAVE_ROLE = 'slave';
 
 function makeOriginSocket() {
     $port = Config::get('port');
@@ -36,7 +40,7 @@ function makeOriginSocket() {
 
 # Default
 Config::set('port', '6379');
-Config::set('role', 'master');
+Config::set('role', MASTER_ROLE);
 
 for($i = 1; $i < $argc; $i++) {
     $arg = $argv[$i];
@@ -45,7 +49,7 @@ for($i = 1; $i < $argc; $i++) {
             Config::set('port', $argv[ ++$i ]);
             break;
         case '--replicaof':
-            Config::set('role', 'slave');
+            Config::set('role', SLAVE_ROLE);
             Config::set('master_host', $argv[ ++$i ]);
             Config::set('master_port', $argv[ ++$i ]);
             break;
@@ -55,6 +59,8 @@ for($i = 1; $i < $argc; $i++) {
 print_r("Configs: \n\n");
 print_r(Config::getAll());
 print_r("\n\n");
+
+SlaveHandshake::start();
 
 $originSocket = makeOriginSocket();
 socket_set_nonblock($originSocket);
