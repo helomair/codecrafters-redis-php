@@ -12,8 +12,10 @@ class MasterPropagate {
     }
     public static function toSlave(string $message) {
         $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
-        foreach($slaveConns as $conn) {
-            socket_write($conn, $message);
+        
+        foreach($slaveConns as $port => $conns) {
+            foreach($conns as $conn)
+                socket_write($conn, $message);
         }
     }
 }

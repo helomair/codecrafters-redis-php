@@ -111,11 +111,8 @@ class Redis {
 
         $slavePort = $this->params[1];
         $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
-
-        if (empty($slaveConns[$slavePort])) {
-            $slaveConns[$slavePort] = $this->requestedSocket;
-            Config::setArray(KEY_REPLICA_CONNS, $slaveConns);
-        }
+        $slaveConns[$slavePort][] = $this->requestedSocket;
+        Config::setArray(KEY_REPLICA_CONNS, $slaveConns);
 
         return $ret;
     }
