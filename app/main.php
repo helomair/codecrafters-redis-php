@@ -102,6 +102,7 @@ while (true) {
         $inputStr = $inputStrAndSocket[0];
         $socket = $inputStrAndSocket[1];
         $responses = $redis->handle($inputStr, $socket);
+        KeyValues::getAll();
 
         foreach($responses as $response) {
             socket_write($socket, $response);

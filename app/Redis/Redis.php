@@ -122,14 +122,15 @@ class Redis {
     private function replconf(): array {
         $ret = [Encoder::encodeSimpleString("OK")];
 
-        if ($this->params[0] !== 'listening-port') {
-            return $ret;
+        if ($this->params[0] === 'listening-port') {
+            $slavePort = $this->params[1];
+            $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
+            $slaveConns[$slavePort][] = $this->requestedSocket;
+            Config::setArray(KEY_REPLICA_CONNS, $slaveConns);
         }
-
-        $slavePort = $this->params[1];
-        $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
-        $slaveConns[$slavePort][] = $this->requestedSocket;
-        Config::setArray(KEY_REPLICA_CONNS, $slaveConns);
+        else if ($this->params[0] === 'GETACK') {
+            $ret = [Encoder::encodeArrayString(['REPLCONF', 'ACK', Config::getString(KEY_MASTER_REPL_OFFSET)])];
+        }
 
         return $ret;
     }

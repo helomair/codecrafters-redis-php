@@ -10,6 +10,11 @@ class KeyValues {
      */
     private static array $keyValue = [];
 
+    public static function getAll() {
+        // ? test
+        print_r(self::$keyValue);
+    }
+
     public static function set(string $key, string $value, int $expiredAt = -1) {
         // ! Race condition?
         self::$keyValue[$key] = new DataSet($value, $expiredAt);
