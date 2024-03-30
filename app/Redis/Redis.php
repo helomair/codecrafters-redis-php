@@ -25,9 +25,9 @@ class Redis {
             $this->command = strtoupper($inputs[0]);
             $this->params = array_slice($inputs, 1);
 
-            print_r($this->command . " =>  ");
-            print_r($this->params);
-            print_r("\n");
+            // print_r($this->command . " =>  ");
+            // print_r($this->params);
+            // print_r("\n");
 
 
             switch ($this->command) {
@@ -106,9 +106,9 @@ class Redis {
         $type = $this->params[0];
         switch ($type) {
             case 'listening-port':
-                $slavePort = $this->params[1];
+                // $slavePort = $this->params[1];
                 $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
-                $slaveConns[$slavePort][] = $this->requestedSocket;
+                $slaveConns[] = $this->requestedSocket;
                 Config::setArray(KEY_REPLICA_CONNS, $slaveConns);
                 break;
 
@@ -135,9 +135,9 @@ class Redis {
     }
 
     public function wait(): array {
-        $numreplicas = $this->params[0];
+        $numreplicas = count(Config::getArray(KEY_REPLICA_CONNS));
         $timeout = $this->params[1];
-        return [Encoder::encodeIntegerString(0)];
+        return [Encoder::encodeIntegerString($numreplicas)];
     }
 
     private function addCommandOffset(): void {

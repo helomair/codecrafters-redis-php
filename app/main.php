@@ -100,7 +100,6 @@ while (true) {
         if (empty($inputStr)) continue;
 
         $responses = $redis->handle($inputStr, $socket);
-        print_r($responses);
         sendResponses($responses, $socket);
     }
 }
