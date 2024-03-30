@@ -3,6 +3,7 @@
 namespace app;
 
 use app\Config;
+use app\Redis\libs\InputParser;
 use app\Redis\Redis;
 use app\Redis\libs\KeyValues;
 use app\Redis\slave\SlaveHandshake;
@@ -21,6 +22,7 @@ define('KEY_MASTER_REPLID', 'master_replid');
 define('KEY_MASTER_REPL_OFFSET', 'master_repl_offset');
 define('KEY_MASTER_HOST', 'master_host');
 define('KEY_MASTER_PORT', 'master_port');
+define('KEY_MASTER_SOCKET', 'master_socket');
 
 function makeSelfListeningSocket() {
     $port = intval(Config::getString(KEY_SELF_PORT));
@@ -46,6 +48,18 @@ function makeSelfListeningSocket() {
 
     return $socket;
 }
+
+function sendResponses(array $responses, $socket) {
+    foreach($responses as $response) {
+        foreach ($response as $text) 
+            socket_write($socket, $text);
+    }
+}
+
+
+
+
+
 
 # Default
 Config::setString(KEY_SELF_PORT, '6379');
@@ -75,11 +89,13 @@ $selfListeningSocket = makeSelfListeningSocket();
 socket_set_nonblock($selfListeningSocket);
 
 $slaveToMasterSocket = Config::isMaster() ? null : SlaveHandshake::start();
+Config::setArray(KEY_MASTER_SOCKET, [$slaveToMasterSocket]);
 
 $socketPool = !is_null($slaveToMasterSocket) ? [$slaveToMasterSocket] : [];
 $redis = new Redis();
 
-// print_r($redis->handle("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"));
+// print_r($redis->handle("*1\r\n$4\r\nping\r\n", null));
+// exit(0);
 
 while (true) {
     if ( $newSocket = socket_accept($selfListeningSocket) ) {
@@ -102,11 +118,10 @@ while (true) {
         $inputStr = $inputStrAndSocket[0];
         $socket = $inputStrAndSocket[1];
         $responses = $redis->handle($inputStr, $socket);
-        KeyValues::getAll();
+        // KeyValues::getAll();
 
-        foreach($responses as $response) {
-            socket_write($socket, $response);
-        }
+        sendResponses($responses, $socket);
+
     }
 }
 // socket_close($originSocket);

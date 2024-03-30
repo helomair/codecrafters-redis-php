@@ -36,10 +36,11 @@ class SlaveHandshake {
             self::sendToMaster($socket, ['REPLCONF', 'capa', 'psync2']);
 
             # Step4: First connection, PSYNC ? -1, (PSYNC <replication ID> <offset>)
-            self::sendToMaster($socket, ['PSYNC', '?', '-1']);
+            $message = Encoder::encodeArrayString(['PSYNC', '?', '-1']);
+            socket_write($socket, $message);
+            // return socket_read($socket, 1024);
+            // self::sendToMaster($socket, );
 
-            # Step5: Receive RDB file.
-            $RDBFileContent = socket_read($socket, 1024);
 
             socket_set_nonblock($socket);
 

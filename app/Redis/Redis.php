@@ -3,26 +3,30 @@
 namespace app\Redis;
 
 use app\Config;
+use app\Redis\libs\Helper;
 use app\Redis\libs\Encoder;
+use app\Redis\libs\InputParser;
 use app\Redis\libs\KeyValues;
 use app\Redis\master\MasterPropagate;
 
 class Redis {
-    private array $inputArguments = [];
-
+    private bool   $masterAcked = false;
     private array  $params = [];
     private string $command = "";
     private $requestedSocket;
-    private const WRITE_COMMANDS = ['SET', 'DEL'];
 
-    public function handle(string $input, $requestedSocket): array {
-        $this->parseInputString($input);
+    public function handle(string $inputStr, $requestedSocket): array {
+        $parsedInputs = InputParser::init($inputStr)->parse();
         $this->requestedSocket = $requestedSocket;
 
-        $ret = [];
-        foreach($this->inputArguments as $arg) {
-            $this->command = strtoupper($arg[0]);
-            $this->params = array_slice($arg, 1) ?? [];
+        $responses = [];
+        foreach($parsedInputs as $inputs) {
+            if (empty($inputs)) continue;
+
+            $this->command = strtoupper($inputs[0]);
+            $this->params = array_slice($inputs, 1);
+
+            // $this->parseInputString($input);
             switch ($this->command) {
                 case "PING":
                     $ret = $this->ping();
@@ -49,46 +53,17 @@ class Redis {
                     $ret = [];
             }
     
-            if (in_array($this->command, self::WRITE_COMMANDS)) {
-                $ret = Config::isMaster() ? $ret : [];
-                MasterPropagate::sendParamsToSlave($this->command, $this->params);
-            }
+            MasterPropagate::sendParamsToSlave($this->command, $this->params);
+            $this->addCommandOffset();
+
+            $responses[] = $ret;
         }
 
-        return $ret;
-    }
-
-    private function parseInputString(string $inputStr): void {
-        $this->inputArguments = [];
-
-        $inputs = explode("\r\n", $inputStr);
-        $length = count($inputs);
-        
-        for($i = 0; $i < $length; $i++) {
-            $this->parseInputStringVerifyArgs($inputs, $i);
-        }
-    }
-
-    private function parseInputStringVerifyArgs(array &$inputs, int &$i) {
-        $RESPArrayLength = $inputs[$i];
-        if( ($pos = strpos($RESPArrayLength, '*')) === false)
-            return;
-
-        $RESPArrayLength = intval(substr($RESPArrayLength, $pos + 1));
-        $args = [];
-        while($RESPArrayLength > 0) {
-            $arg = $inputs[ ++$i ];
-            
-            if (strpos($arg, '$') !== false) continue;
-
-            $args[] = $arg;
-            $RESPArrayLength --;
-        }
-        $this->inputArguments[] = $args;
+        return $responses;
     }
 
     private function ping(): array {
-        return [Encoder::encodeSimpleString("PONG")];
+        return Config::isMaster() ? [Encoder::encodeSimpleString("PONG")] : [];
     }
 
     private function echo(): array {
@@ -108,7 +83,7 @@ class Redis {
         }
 
         KeyValues::set($key, $value, $expiredAt);
-        return [Encoder::encodeSimpleString("OK")];
+        return Config::isMaster() ? [Encoder::encodeSimpleString("OK")] : [];
     }
 
     private function get(): array {
@@ -122,14 +97,20 @@ class Redis {
     private function replconf(): array {
         $ret = [Encoder::encodeSimpleString("OK")];
 
-        if ($this->params[0] === 'listening-port') {
-            $slavePort = $this->params[1];
-            $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
-            $slaveConns[$slavePort][] = $this->requestedSocket;
-            Config::setArray(KEY_REPLICA_CONNS, $slaveConns);
-        }
-        else if ($this->params[0] === 'GETACK') {
-            $ret = [Encoder::encodeArrayString(['REPLCONF', 'ACK', Config::getString(KEY_MASTER_REPL_OFFSET)])];
+        $type = $this->params[0];
+        switch ($type) {
+            case 'listening-port':
+                $slavePort = $this->params[1];
+                $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
+                $slaveConns[$slavePort][] = $this->requestedSocket;
+                Config::setArray(KEY_REPLICA_CONNS, $slaveConns);
+                break;
+
+            case 'GETACK':
+                $this->masterAcked = true;
+                $datas = ['REPLCONF', 'ACK', Config::getString(KEY_MASTER_REPL_OFFSET)];
+                $ret = [Encoder::encodeArrayString($datas)];
+                break;
         }
 
         return $ret;
@@ -145,5 +126,22 @@ class Redis {
         $fullSyncFile = Encoder::encodeFileString(base64_decode($fileContent));
 
         return [$fullSync, $fullSyncFile];
+    }
+
+    private function addCommandOffset(): void {
+        if (!$this->masterAcked)
+            return;
+
+        $originInputStr = Encoder::encodeArrayString([$this->command, ...$this->params]);
+
+        $socket = $this->requestedSocket;
+        $slaveToMasterSocket = Config::getArray(KEY_MASTER_SOCKET)[0];
+
+        if ( !is_null($slaveToMasterSocket) && ($socket === $slaveToMasterSocket) ) {
+            $bytes = strlen($originInputStr);
+            $nowOffset = Config::getInt(KEY_MASTER_REPL_OFFSET);
+            $nowOffset += $bytes;
+            Config::setString(KEY_MASTER_REPL_OFFSET, strval($nowOffset));
+        }
     }
 }

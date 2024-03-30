@@ -41,6 +41,17 @@ class Config {
         return $ret;
     }
 
+    public static function getInt(string $key): int {
+        $ret = self::$configs[$key] ?? "";
+
+        if (filter_var($ret, FILTER_VALIDATE_INT) === false) {
+            echo "Config get int but value can't convert to int, key : {$key}\n";
+            exit(1);
+        }
+
+        return intval($ret);
+    }
+
     public static function setArray(string $key, array $values): void {
         self::$configs[$key] = $values;
     }
