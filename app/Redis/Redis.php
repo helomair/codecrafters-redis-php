@@ -9,7 +9,6 @@ use app\Redis\libs\KeyValues;
 use app\Redis\master\MasterPropagate;
 
 class Redis {
-    private bool   $masterAcked = false;
     private array  $params = [];
     private string $command = "";
     private $requestedSocket;
@@ -108,12 +107,18 @@ class Redis {
             case 'listening-port':
                 // $slavePort = $this->params[1];
                 $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
-                $slaveConns[] = $this->requestedSocket;
+                $slaveConns[] = [
+                    'conn' => $this->requestedSocket,
+                    'propagates' => 0
+                ];
                 Config::setArray(KEY_REPLICA_CONNS, $slaveConns);
+                print_r("Connected Slave : ");
+                print_r($this->requestedSocket);
+                print_r("\n");
                 break;
 
             case 'GETACK':
-                $this->masterAcked = true;
+                // $this->masterAcked = true;
                 $datas = ['REPLCONF', 'ACK', Config::getString(KEY_MASTER_REPL_OFFSET)];
                 $ret = [Encoder::encodeArrayString($datas)];
                 break;
@@ -135,15 +140,43 @@ class Redis {
     }
 
     public function wait(): array {
-        $numreplicas = count(Config::getArray(KEY_REPLICA_CONNS));
-        $timeout = $this->params[1];
-        return [Encoder::encodeIntegerString($numreplicas)];
+        $numreplicas = intval($this->params[0]);
+        $timeout = microtime(true) * 1000 + intval($this->params[1]);
+        $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
+        $dones = count($slaveConns);
+
+        foreach($slaveConns as $connInfo) {
+            if ($connInfo['propagates'] === 0) continue;
+
+            $dones = 0;
+            $conn = $connInfo['conn'];
+            $context = Encoder::encodeArrayString(['REPLCONF','GETACK','*']);
+            socket_write($conn, $context);
+        }
+
+        while( (microtime(true) * 1000 ) <= $timeout ) {
+            if (empty($slaveConns) || $dones >= $numreplicas)
+                break;
+
+            foreach($slaveConns as $index => $connInfo) {
+                $conn = $connInfo['conn'];
+                $ack = socket_read($conn, 1024);
+
+                if (!empty($ack)) {
+                    $dones++;
+                    unset($slaveConns[$index]);
+                }
+
+                if ($dones >= $numreplicas)
+                    break;
+            }
+        }
+
+        Config::resetReplicaPropagates();
+        return [Encoder::encodeIntegerString($dones)];
     }
 
     private function addCommandOffset(): void {
-        if (!$this->masterAcked)
-            return;
-
         $originInputStr = Encoder::encodeArrayString([$this->command, ...$this->params]);
 
         $socket = $this->requestedSocket;

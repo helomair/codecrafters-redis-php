@@ -20,8 +20,12 @@ class MasterPropagate {
         
         $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
 
-        foreach($slaveConns as $conn) {
+        foreach($slaveConns as &$connInfo) {
+            $conn = $connInfo['conn'];
             socket_write($conn, $message);
+            $connInfo['propagates'] ++;
         }
+
+        Config::setArray(KEY_REPLICA_CONNS, $slaveConns);
     }
 }

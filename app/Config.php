@@ -59,4 +59,13 @@ class Config {
     public static function setString(string $key, string $value): void {
         self::$configs[$key] = $value;
     }
+
+    public static function resetReplicaPropagates() {
+        $slaveConns = self::$configs[KEY_REPLICA_CONNS];
+        foreach($slaveConns as &$connInfo) {
+            $connInfo['propagates'] = 0;
+        }
+
+        self::$configs[KEY_REPLICA_CONNS] = $slaveConns;
+    }
 }

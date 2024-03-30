@@ -38,6 +38,7 @@ class SlaveHandshake {
             # Step4: First connection, PSYNC ? -1, (PSYNC <replication ID> <offset>)
             $message = Encoder::encodeArrayString(['PSYNC', '?', '-1']);
             socket_write($socket, $message);
+            socket_read($socket, 1024);
             // return socket_read($socket, 1024);
             // self::sendToMaster($socket, );
 
