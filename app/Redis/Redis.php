@@ -3,7 +3,6 @@
 namespace app\Redis;
 
 use app\Config;
-use app\Redis\libs\Helper;
 use app\Redis\libs\Encoder;
 use app\Redis\libs\InputParser;
 use app\Redis\libs\KeyValues;
@@ -26,7 +25,11 @@ class Redis {
             $this->command = strtoupper($inputs[0]);
             $this->params = array_slice($inputs, 1);
 
-            // $this->parseInputString($input);
+            print_r($this->command . " =>  ");
+            print_r($this->params);
+            print_r("\n");
+
+
             switch ($this->command) {
                 case "PING":
                     $ret = $this->ping();
@@ -48,6 +51,9 @@ class Redis {
                     break;
                 case "PSYNC":
                     $ret = $this->psync();
+                    break;
+                case "WAIT":
+                    $ret = $this->wait();
                     break;
                 default:
                     $ret = [];
@@ -126,6 +132,12 @@ class Redis {
         $fullSyncFile = Encoder::encodeFileString(base64_decode($fileContent));
 
         return [$fullSync, $fullSyncFile];
+    }
+
+    public function wait(): array {
+        $numreplicas = $this->params[0];
+        $timeout = $this->params[1];
+        return [Encoder::encodeIntegerString(0)];
     }
 
     private function addCommandOffset(): void {

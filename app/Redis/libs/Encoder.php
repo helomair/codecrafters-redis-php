@@ -41,6 +41,11 @@ class Encoder {
         return "+{$text}\r\n";
     }
 
+    public static function encodeIntegerString(int $value): string {
+        $neg = ($value < 0) ? "-" : "+";
+        return ":{$neg}{$value}\r\n";
+    }
+
     public static function nullString(): string {
         return "$-1\r\n";
     }

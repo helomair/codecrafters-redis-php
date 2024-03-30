@@ -10,8 +10,6 @@ use app\Redis\slave\SlaveHandshake;
 
 require_once 'autoload.php';
 
-echo "Logs from your program will appear here";
-
 define('MASTER_ROLE', 'master');
 define('SLAVE_ROLE', 'slave');
 
@@ -58,9 +56,6 @@ function sendResponses(array $responses, $socket) {
 
 
 
-
-
-
 # Default
 Config::setString(KEY_SELF_PORT, '6379');
 Config::setString(KEY_SELF_ROLE, MASTER_ROLE);
@@ -81,10 +76,6 @@ for($i = 1; $i < $argc; $i++) {
     }
 }
 
-print_r("Configs: \n\n");
-print_r(Config::getAll());
-print_r("\n\n");
-
 $selfListeningSocket = makeSelfListeningSocket();
 socket_set_nonblock($selfListeningSocket);
 
@@ -103,25 +94,14 @@ while (true) {
         socket_set_nonblock($newSocket);
     }
 
-    $infos = [];
     foreach ($socketPool as $index => $socket) {
         $inputStr = socket_read($socket, 1024);
-        if (!empty($inputStr)) {
-            $infos[] = [$inputStr, $socket];
-        }
-    }
 
-    foreach ($infos as $inputStrAndSocket) {
-        if (!$inputStrAndSocket)
-            continue;
+        if (empty($inputStr)) continue;
 
-        $inputStr = $inputStrAndSocket[0];
-        $socket = $inputStrAndSocket[1];
         $responses = $redis->handle($inputStr, $socket);
-        // KeyValues::getAll();
-
+        print_r($responses);
         sendResponses($responses, $socket);
-
     }
 }
 // socket_close($originSocket);

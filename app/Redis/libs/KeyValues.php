@@ -2,18 +2,11 @@
 
 namespace app\Redis\libs;
 
-use app\Helpers\Helpers;
-
 class KeyValues {
     /**
      * @param DataSet
      */
     private static array $keyValue = [];
-
-    public static function getAll() {
-        // ? test
-        print_r(self::$keyValue);
-    }
 
     public static function set(string $key, string $value, int $expiredAt = -1) {
         // ! Race condition?
