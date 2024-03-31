@@ -15,6 +15,8 @@ echo "Logs from your program will appear here";
 define('MASTER_ROLE', 'master');
 define('SLAVE_ROLE', 'slave');
 
+define('KEY_DIR_PATH', 'dir');
+define('KEY_DB_FILENAME', 'dbfilename');
 define('KEY_REPLICA_CONNS', 'replica_connections');
 define('KEY_SELF_PORT', 'port');
 define('KEY_SELF_ROLE', 'role');
@@ -74,6 +76,12 @@ for($i = 1; $i < $argc; $i++) {
             Config::setString(KEY_SELF_ROLE, SLAVE_ROLE);
             Config::setString(KEY_MASTER_HOST, $argv[ ++$i ]);
             Config::setString(KEY_MASTER_PORT, $argv[ ++$i ]);
+            break;
+        case '--dir':
+            Config::setString(KEY_DIR_PATH, $argv[ ++$i ]);
+            break;
+        case '--dbfilename':
+            Config::setString(KEY_DB_FILENAME, $argv[ ++$i ]);
             break;
     }
 }
