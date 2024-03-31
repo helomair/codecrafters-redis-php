@@ -65,7 +65,7 @@ class RDBParser {
             }
 
             if ($this->getNowHexString() === self::EOF) {
-                // echo "EOF!\n";
+                echo "EOF!\n";
                 break;
             }
 
@@ -74,21 +74,21 @@ class RDBParser {
     }
 
     private function selectDB() {
-        // echo "\n    Start Select DB\n\n";
+        echo "\n    Start Select DB\n\n";
         $this->ptrNext();
         $this->dbNumber = $this->parseLengthEncoding();
-        // echo "\n    End Select DB\n\n";
+        echo "\n    End Select DB\n\n";
     }
 
     private function parseKeyValuePairSections() {
-        // echo "\n    Start parse DB key-vals, DB: {$this->dbNumber}\n\n";
+        echo "\n    Start parse DB key-vals, DB: {$this->dbNumber}\n\n";
 
         $this->parseResizeDB();
         $this->ptrNext();
 
         $this->parseKeyValuePair();
 
-        // echo "\n    End parse DB key-vals\n\n";
+        echo "\n    End parse DB key-vals\n\n";
     }
 
     private function parseResizeDB() {
@@ -97,20 +97,20 @@ class RDBParser {
 
         $this->ptrNext();
 
-        // echo "\n    Start resize DB\n\n";
+        echo "\n    Start resize DB\n\n";
         $dbHashTableSize = $this->parseLengthEncoding();
         $this->ptrNext();
 
         $dbExpirlyHashTableSize = $this->parseLengthEncoding();
 
-        // echo "hash table size: {$dbHashTableSize}\n";
-        // echo "expirly hash table size: {$dbExpirlyHashTableSize}\n";
+        echo "hash table size: {$dbHashTableSize}\n";
+        echo "expirly hash table size: {$dbExpirlyHashTableSize}\n";
 
-        // echo "\n    End resize DB\n\n";
+        echo "\n    End resize DB\n\n";
     }
 
     private function parseKeyValuePair() {
-        // echo "\n    Start parse Key Value Pair\n\n";
+        echo "\n    Start parse Key Value Pair\n\n";
 
         $this->echoNowContent();
 
@@ -118,14 +118,14 @@ class RDBParser {
             $nowHexString = $this->getNowHexString();
             $nowDec = hexdec($nowHexString);
 
-            // echo "Hex: {$nowHexString}, Dec: {$nowDec}\n\n";
+            echo "Hex: {$nowHexString}, Dec: {$nowDec}\n\n";
 
             switch ($nowDec) {
                 case ValueType::STRING:
                     $key = $this->parseStringEncoding();
                     $value = $this->parseStringEncoding();
 
-                    // echo "!!!  Key: {$key}, Value: {$value}  !!!\n";
+                    echo "!!!  Key: {$key}, Value: {$value}  !!!\n";
 
                     KeyValues::setToSelectedDB($this->dbNumber, $key, $value);
                     break;
@@ -134,15 +134,15 @@ class RDBParser {
             $this->ptrNext();
         }
 
-        // echo "\n    End parse Key Value Pair\n\n";
+        echo "\n    End parse Key Value Pair\n\n";
     }
 
     private function parseStringEncoding(): string {
-        // echo "\n    Start parse String Encoding\n\n";
+        echo "\n    Start parse String Encoding\n\n";
         $this->ptrNext();
         $length = $this->parseLengthEncoding();
 
-        // echo "parse String length: {$length}\n";
+        echo "parse String length: {$length}\n";
 
         $this->ptrNext();
         $contents = array_slice($this->dbContents, $this->ptr, $length);
@@ -150,20 +150,20 @@ class RDBParser {
         foreach($contents as $hex) {
             $str .= chr(hexdec($hex));
         }
-        // echo "parse String content: {$str}\n";
+        echo "parse String content: {$str}\n";
 
         // skip the string contents.
         for($i = 0; $i < $length - 1; $i++) {
             $this->ptrNext();
         }
 
-        // echo "\n    End parse String Encoding\n\n";
+        echo "\n    End parse String Encoding\n\n";
 
         return $str;
     }
 
     private function parseLengthEncoding(): int {
-        // echo "\n    Start parse Length Encoding\n\n";
+        echo "\n    Start parse Length Encoding\n\n";
 
         $this->echoNowContent();
 
@@ -175,7 +175,7 @@ class RDBParser {
             $lengthDec = base_convert(substr($bits, 2, 6), 2, 10);
             $length = intval($lengthDec);
         }
-        // echo "\n    End parse Length Encoding\n\n";
+        echo "\n    End parse Length Encoding\n\n";
 
         return $length;
     }
@@ -196,7 +196,7 @@ class RDBParser {
     }
 
     private function echoNowContent(): void {
-        // echo "Now ptr: {$this->ptr}, content: {$this->getNowHexString()}\n";
+        echo "Now ptr: {$this->ptr}, content: {$this->getNowHexString()}\n";
     }
 
     private function getNowHexString(): ?string {
