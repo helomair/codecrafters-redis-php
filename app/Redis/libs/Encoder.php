@@ -14,7 +14,11 @@ class Encoder {
 
         $ret = "*{$counts}\r\n";
         foreach($datas as $data) {
-            $ret .= self::encodeBulkString($data);
+            if (is_array($data)) {
+                $ret .= self::encodeArrayString($data);
+            } else {
+                $ret .= self::encodeBulkString($data);
+            }
         }
 
         return $ret;

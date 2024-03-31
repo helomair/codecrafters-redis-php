@@ -15,11 +15,12 @@ use app\Redis\Commands\KeysCommand;
 use app\Redis\Commands\PingCommand;
 use app\Redis\Commands\TypeCommand;
 use app\Redis\Commands\WaitCommand;
+use app\Redis\Commands\XaddCommand;
 use app\Redis\Commands\PsyncCommand;
 use app\Redis\Commands\ConfigCommand;
+use app\Redis\Commands\XrangeCommand;
 use app\Redis\master\MasterPropagate;
 use app\Redis\Commands\ReplconfCommand;
-use app\Redis\Commands\XaddCommand;
 
 class Redis {
     private array  $params = [];
@@ -90,6 +91,9 @@ class Redis {
                 break;
             case "XADD":
                 $ret = XaddCommand::execute($this->params);
+                break;
+            case "XRANGE":
+                $ret = XrangeCommand::execute($this->params);
                 break;
         }
 

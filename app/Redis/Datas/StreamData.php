@@ -16,20 +16,8 @@ class StreamData {
             return [ $id, "ERR The ID specified in XADD must be greater than 0-0" ];
         }
 
-        [$newMs, $newSeq] = $this->getNewMsAndSeq($id);
-
         // ! Race Condition.
-
-        // $newMs = intval($newMs);
-
-        // if ($newSeq === "*") {
-        //     if ($newMs === $this->lastEntryId_MS)
-        //         $newSeq = $this->lastEntryId_SeqNumber + 1;
-        //     else 
-        //         $newSeq = 0;
-        // } else {
-        //     $newSeq = intval($newSeq);
-        // }
+        [$newMs, $newSeq] = $this->getNewMsAndSeq($id);
 
         if ( 
             ($newMs > $this->lastEntryId_MS) ||
@@ -50,12 +38,15 @@ class StreamData {
         return $this->entries[$id];
     }
 
+    public function getEntries(): array {
+        return $this->entries;
+    }
+
     private function getNewMsAndSeq(string $id): array {
         $ms_seq = explode("-", $id);
 
         // ! Race Condition.
 
-        // print_r(microtime(true));
         $newMs = ($ms_seq[0] === "*") ? round(microtime(true) * 1000) : intval($ms_seq[0]);
 
         $newSeq = $ms_seq[1] ?? "*";
