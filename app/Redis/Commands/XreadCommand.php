@@ -14,28 +14,57 @@ class XreadCommand {
 
     public static function handleSubCommands(string $type, array $params): ?string {
         $ret = "";
+        print_r("Type: {$type}\n");
         switch ($type) {
+            case 'block':
+                $sleepTimeMs = intval($params[0]);
+                $entryCount = -1;
+                if ($sleepTimeMs === 0) {
+                    $dataSet = KeyValues::get($params[2]);
+                    $streamData = $dataSet->getValue();
+                    $entryCount = count($streamData->getEntries());
+                }
+                $ret = self::handleBlock($params, $entryCount, Config::getSocket(KEY_NOW_RUNNING_SOCKET));
+                break;
             case 'streams':
                 $ret = self::parseKeyRangeAndReadStreams($params);
                 $ret = Encoder::encodeArrayString($ret);
                 break;
-            case 'block':
-                $sleepTimeMs = intval($params[0]);
-                JobQueue::add(
-                    [self::class, 'handleSubCommands'], // callable
-                    ['streams', array_slice($params, 2)],
-                    Config::getSocket(KEY_NOW_RUNNING_SOCKET),
-                    round(microtime(true) * 1000) + $sleepTimeMs
-                );
-
-                $ret = null;
-                break;
         }
 
-        print_r($ret);
-        print_r("\n");
+        // print_r($ret);
+        // print_r("\n");
 
         return $ret;
+    }
+
+    public static function handleBlock(array $params, int $lastStreamEntryCount = -1, $socket) {
+        $sleepTimeMs = intval($params[0]);
+        $startAtMs = ($sleepTimeMs > 0) ? (round(microtime(true) * 1000) + $sleepTimeMs) : -1;
+
+        // Check still not added.
+
+        $dataSet = KeyValues::get($params[2]);
+        $streamData = $dataSet->getValue();
+        $entryCount = count($streamData->getEntries());
+        if (($sleepTimeMs === 0) && ($lastStreamEntryCount > (-1)) && $lastStreamEntryCount === $entryCount) {
+            JobQueue::add(
+                [self::class, 'handleBlock'], 
+                [$params, $lastStreamEntryCount, $socket],
+                $socket, 
+                $startAtMs
+            );
+        }
+        else {
+            JobQueue::add(
+                [self::class, 'handleSubCommands'], 
+                ['streams', array_slice($params, 2)],
+                $socket, 
+                $startAtMs
+            );
+        }
+
+        return null;
     }
 
     private static function parseKeyRangeAndReadStreams(array $params): array {
@@ -48,6 +77,9 @@ class XreadCommand {
             $key = $params[$i];
             $startID = $params[ $i+$jump ];
             $streams = self::readStreams($key, $startID);
+
+            print_r("Streams: ");
+            print_r($streams);
 
             if (empty($streams)) continue;
 

@@ -20,14 +20,17 @@ class JobQueue {
             if ($infos['startAt'] > (microtime(true) * 1000))
                 continue;
 
+            // print_r($infos['job']);
+            // print_r($infos['params']);
+            // exit(0);
+
             $ret = call_user_func_array($infos['job'], $infos['params']);
-            unset($jobs[$index]);
+            unset(self::$jobs[$index]);
 
             if (!$ret) continue;
+            print_r($ret);
             socket_write($infos['socket'], $ret);
         }
-
-        self::$jobs = $jobs;
     }
 
 
