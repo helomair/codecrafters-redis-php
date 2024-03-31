@@ -4,7 +4,7 @@ namespace app\Redis\Commands;
 
 use app\Config;
 use app\Redis\libs\Encoder;
-use app\Redis\libs\KeyValues;
+use app\KeyValues;
 
 class PingCommand {
     public static function execute(): array {

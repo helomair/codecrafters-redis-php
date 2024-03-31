@@ -6,16 +6,17 @@ use app\Config;
 use app\Redis\libs\Encoder;
 use app\Redis\libs\InputParser;
 
-use app\Redis\master\MasterPropagate;
-
 use app\Redis\Commands\GetCommand;
+
 use app\Redis\Commands\SetCommand;
 use app\Redis\Commands\EchoCommand;
 use app\Redis\Commands\InfoCommand;
+use app\Redis\Commands\KeysCommand;
 use app\Redis\Commands\PingCommand;
 use app\Redis\Commands\WaitCommand;
 use app\Redis\Commands\PsyncCommand;
 use app\Redis\Commands\ConfigCommand;
+use app\Redis\master\MasterPropagate;
 use app\Redis\Commands\ReplconfCommand;
 
 class Redis {
@@ -51,7 +52,6 @@ class Redis {
 
     private function commandExecution(): array {
         $ret = [];
-
         switch ($this->command) {
             case "PING":
                 $ret = PingCommand::execute();
@@ -79,6 +79,9 @@ class Redis {
                 break;
             case "CONFIG":
                 $ret = ConfigCommand::execute($this->params);
+                break;
+            case "KEYS":
+                $ret = KeysCommand::execute($this->params);
                 break;
         }
 

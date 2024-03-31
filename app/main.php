@@ -3,9 +3,10 @@
 namespace app;
 
 use app\Config;
-use app\Redis\libs\InputParser;
 use app\Redis\Redis;
-use app\Redis\libs\KeyValues;
+use app\Redis\RDB\RDBParser;
+use app\KeyValues;
+use app\Redis\libs\InputParser;
 use app\Redis\slave\SlaveHandshake;
 
 require_once 'autoload.php';
@@ -98,6 +99,9 @@ Config::setArray(KEY_MASTER_SOCKET, [$slaveToMasterSocket]);
 
 $socketPool = !is_null($slaveToMasterSocket) ? [$slaveToMasterSocket] : [];
 $redis = new Redis();
+
+RDBParser::parse();
+KeyValues::getAll();
 
 // print_r($redis->handle("*1\r\n$4\r\nping\r\n", null));
 // exit(0);
