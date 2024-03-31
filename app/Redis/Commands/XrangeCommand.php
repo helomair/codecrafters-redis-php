@@ -42,12 +42,13 @@ class XrangeCommand {
             $ret[] = [ $id, $flattenValues ];
         }
 
-        print_r($ret);
-
         return [Encoder::encodeArrayString($ret)];
     }
 
     private static function makeActualID(string $id): string {
+        if ($id === '-')
+            return '0-0';
+        
         if(strpos($id, '-') !== false)
             return $id;
 
