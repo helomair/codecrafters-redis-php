@@ -47,10 +47,9 @@ class InputParser {
         // ['$?', 'PARAM1', '$?', 'PARAM2', ...]
         $params = [];
         foreach($items as $inputStr) {
-            if (strpos($inputStr, "$") !== false) continue;
+            if (preg_match("/\\$\d+/", $inputStr, $m)) continue;
             $params[] = $inputStr;
         }
-
         $this->resultParams[] = $params;
     }
 

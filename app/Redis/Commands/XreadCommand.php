@@ -9,6 +9,7 @@ use app\Redis\libs\Encoder;
 
 class XreadCommand {
     public static function execute(array $params): ?string {
+        print_r($params);
         return  self::handleSubCommands($params[0], array_slice($params, 1));        
     }
 
@@ -24,7 +25,7 @@ class XreadCommand {
                     $streamData = $dataSet->getValue();
                     $entryCount = count($streamData->getEntries());
                 }
-                $ret = self::handleBlock($params, $entryCount, Config::getSocket(KEY_NOW_RUNNING_SOCKET));
+                $ret = self::handleBlock($params, Config::getSocket(KEY_NOW_RUNNING_SOCKET), $entryCount);
                 break;
             case 'streams':
                 $ret = self::parseKeyRangeAndReadStreams($params);
@@ -38,7 +39,7 @@ class XreadCommand {
         return $ret;
     }
 
-    public static function handleBlock(array $params, int $lastStreamEntryCount = -1, $socket) {
+    public static function handleBlock(array $params, $socket, int $lastStreamEntryCount = -1) {
         $sleepTimeMs = intval($params[0]);
         $startAtMs = ($sleepTimeMs > 0) ? (round(microtime(true) * 1000) + $sleepTimeMs) : -1;
 
@@ -50,12 +51,13 @@ class XreadCommand {
         if (($sleepTimeMs === 0) && ($lastStreamEntryCount > (-1)) && $lastStreamEntryCount === $entryCount) {
             JobQueue::add(
                 [self::class, 'handleBlock'], 
-                [$params, $lastStreamEntryCount, $socket],
+                [$params, $socket, $lastStreamEntryCount],
                 $socket, 
                 $startAtMs
             );
         }
         else {
+            // print_r($params);
             JobQueue::add(
                 [self::class, 'handleSubCommands'], 
                 ['streams', array_slice($params, 2)],
@@ -72,6 +74,7 @@ class XreadCommand {
 
         // param1 param2 start1 start2, jump = 2.
         $paramCounts = count($params);
+        // print_r($params);
         $jump = $paramCounts / 2;
         for($i = 0; $i < $paramCounts - $jump; $i++) {
             $key = $params[$i];
@@ -96,28 +99,44 @@ class XreadCommand {
             return [];
         }
 
-        $startID = self::makeActualID($startID);
-
-        [$startMs, $startSeq] = explode('-', $startID);
-
+        // ! Refactor.
         $ret = [];
-        foreach($streamData->getEntries() as $id => $values) {
-            [$nowMs, $nowSeq] = explode('-', $id);
+        if ($startID === '$') {
+            $entries = $streamData->getEntries();
+            $id = array_key_last($entries);
+            $lastEntry = $entries[$id]; 
 
-            if ( ($startMs > $nowMs) )
-                continue;
-
-            // Ms in range, check Seq.
-            // start: a-10 vs now: a-0, start: a-10 vs now: a-10
-            if ($startMs === $nowMs && $startSeq >= $nowSeq) 
-                continue;
-            
             $flattenValues = [];
-            foreach($values as $innerKey => $value) {
+            foreach($lastEntry as $innerKey => $value) {
                 $flattenValues[] = $innerKey;
                 $flattenValues[] = $value;
             }
             $ret[] = [$id, $flattenValues];
+        }
+        else {
+            $startID = self::makeActualID($startID);
+
+            [$startMs, $startSeq] = explode('-', $startID);
+    
+            $ret = [];
+            foreach($streamData->getEntries() as $id => $values) {
+                [$nowMs, $nowSeq] = explode('-', $id);
+    
+                if ( ($startMs > $nowMs) )
+                    continue;
+    
+                // Ms in range, check Seq.
+                // start: a-10 vs now: a-0, start: a-10 vs now: a-10
+                if ($startMs === $nowMs && $startSeq >= $nowSeq) 
+                    continue;
+                
+                $flattenValues = [];
+                foreach($values as $innerKey => $value) {
+                    $flattenValues[] = $innerKey;
+                    $flattenValues[] = $value;
+                }
+                $ret[] = [$id, $flattenValues];
+            }
         }
 
         return (empty($ret)) ? [] : [$key, $ret];
