@@ -22,12 +22,13 @@ class XaddCommand {
 
         $dataSet = KeyValues::get($key);
         if (is_null($dataSet)) {
-            $newStreamData = new StreamData($id, $values);
+            $newStreamData = new StreamData();
+            [$id, $err] = $newStreamData->addEntry($id, $values);
             KeyValues::set($key, $newStreamData, -1, 'stream');
         }
         else if ($dataSet->getType() === 'stream') {
             $streamData = $dataSet->getValue(); // StreamData
-            $err = $streamData->addEntry($id, $values);
+            [$id, $err] = $streamData->addEntry($id, $values);
         }
 
         $retStr = (empty($err)) ? Encoder::encodeSimpleString($id): Encoder::encodeErrorString($err);
