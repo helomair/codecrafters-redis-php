@@ -22,18 +22,18 @@ class KeyValues {
     public static function setToSelectedDB(
         int $dbNumber, 
         string $key, 
-        string $value, 
+        $value, 
         int $expiredAt = -1
     ): void {
         self::$keyValue[$dbNumber][$key] = new DataSet($value, $expiredAt);
     }
 
-    public static function set(string $key, string $value, int $expiredAt = -1): void {
+    public static function set(string $key, $value, int $expiredAt = -1): void {
         // ! Race condition?
         self::$keyValue[self::$dbNumber][$key] = new DataSet($value, $expiredAt);
     }
 
-    public static function get(string $key): ?string {
+    public static function get(string $key) {
         $dataSet = self::$keyValue[self::$dbNumber][$key] ?? null;
 
         if (empty($dataSet) || $dataSet->isExpired())
@@ -49,15 +49,15 @@ class KeyValues {
 }
 
 class DataSet {
-    private string $value;
+    private $value;
     private int    $expiredAt;
 
-    public function __construct(string $value, int $expiredAt) {
+    public function __construct($value, int $expiredAt) {
         $this->value = $value;
         $this->expiredAt = $expiredAt;
     }
 
-    public function getValue(): string {
+    public function getValue() {
         return $this->value;
     }
 

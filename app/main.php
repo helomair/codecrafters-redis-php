@@ -101,7 +101,7 @@ $socketPool = !is_null($slaveToMasterSocket) ? [$slaveToMasterSocket] : [];
 $redis = new Redis();
 
 RDBParser::parse();
-KeyValues::getAll();
+// KeyValues::getAll();
 
 // print_r($redis->handle("*1\r\n$4\r\nping\r\n", null));
 // exit(0);

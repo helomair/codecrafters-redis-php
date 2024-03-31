@@ -13,6 +13,7 @@ use app\Redis\Commands\EchoCommand;
 use app\Redis\Commands\InfoCommand;
 use app\Redis\Commands\KeysCommand;
 use app\Redis\Commands\PingCommand;
+use app\Redis\Commands\TypeCommand;
 use app\Redis\Commands\WaitCommand;
 use app\Redis\Commands\PsyncCommand;
 use app\Redis\Commands\ConfigCommand;
@@ -82,6 +83,9 @@ class Redis {
                 break;
             case "KEYS":
                 $ret = KeysCommand::execute($this->params);
+                break;
+            case "TYPE":
+                $ret = TypeCommand::execute($this->params);
                 break;
         }
 
