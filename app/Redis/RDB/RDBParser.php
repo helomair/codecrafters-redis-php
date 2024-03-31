@@ -182,7 +182,7 @@ class RDBParser {
 
     private function hexToBits(string $hexString) {
         $bits = base_convert($hexString, 16, 2);
-        return str_pad($bits, 8 - strlen($bits), '0', STR_PAD_LEFT);
+        return str_pad($bits, 8, "0", STR_PAD_LEFT);
     }
 
     private function ptrNext() {
