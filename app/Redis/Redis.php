@@ -19,6 +19,7 @@ use app\Redis\Commands\PsyncCommand;
 use app\Redis\Commands\ConfigCommand;
 use app\Redis\master\MasterPropagate;
 use app\Redis\Commands\ReplconfCommand;
+use app\Redis\Commands\XaddCommand;
 
 class Redis {
     private array  $params = [];
@@ -86,6 +87,9 @@ class Redis {
                 break;
             case "TYPE":
                 $ret = TypeCommand::execute($this->params);
+                break;
+            case "XADD":
+                $ret = XaddCommand::execute($this->params);
                 break;
         }
 

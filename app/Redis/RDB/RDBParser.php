@@ -130,7 +130,10 @@ class RDBParser {
 
                     echo "!!!  Key: {$key}, Value: {$value}  !!!\n";
 
-                    KeyValues::setToSelectedDB($this->dbNumber, $key, $value, $expiredAt);
+                    $originSelectedDB = KeyValues::getDBNum();
+                    KeyValues::useDB($this->dbNumber);
+                    KeyValues::set($key, $value, $expiredAt);
+                    KeyValues::useDB($originSelectedDB);
                     break;
             }
 
@@ -155,7 +158,7 @@ class RDBParser {
 
     private function readBytesInCountsAsDecNum(int $counts): int {
         echo "\n    Start read Bytes In Counts As DecNum\n\n";
-        
+
         echo "Counts: {$counts}\n";
         $this->echoNowContent();
 

@@ -15,31 +15,27 @@ class KeyValues {
         print_r(self::$keyValue);
     }
 
+    public static function getDBNum(): int {
+        return self::$dbNumber;
+    }
+
     public static function useDB(int $number): void {
         self::$dbNumber = $number;
     }
 
-    public static function setToSelectedDB(
-        int $dbNumber, 
-        string $key, 
-        $value, 
-        int $expiredAt = -1
-    ): void {
-        self::$keyValue[$dbNumber][$key] = new DataSet($value, $expiredAt);
-    }
-
-    public static function set(string $key, $value, int $expiredAt = -1): void {
+    public static function set(string $key, $value, int $expiredAt = -1, string $type = 'string'): void {
         // ! Race condition?
-        self::$keyValue[self::$dbNumber][$key] = new DataSet($value, $expiredAt);
+        $newData = new DataSet($value, $expiredAt, $type);
+        self::$keyValue[self::$dbNumber][$key] = $newData;
     }
 
-    public static function get(string $key) {
+    public static function get(string $key): ?DataSet {
         $dataSet = self::$keyValue[self::$dbNumber][$key] ?? null;
 
         if (empty($dataSet) || $dataSet->isExpired())
             return null;
         else {
-            return $dataSet->getValue();
+            return $dataSet;
         }
     }
 
@@ -50,15 +46,24 @@ class KeyValues {
 
 class DataSet {
     private $value;
+    private string $type;
     private int    $expiredAt;
 
-    public function __construct($value, int $expiredAt) {
+    public function __construct($value, int $expiredAt, string $type = 'string') {
         $this->value = $value;
         $this->expiredAt = $expiredAt;
+        $this->type = $type;
     }
 
     public function getValue() {
         return $this->value;
+    }
+
+    public function getType() {
+        if ($this->type === 'string')
+            return gettype($this->type);
+
+        return $this->type;
     }
 
     public function isExpired(): bool {

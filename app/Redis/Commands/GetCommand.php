@@ -8,8 +8,12 @@ use app\KeyValues;
 
 class GetCommand {
     public static function execute(array $params): array {
-        $value = KeyValues::get($params[0]);
-        $retStr = is_null($value) ? Encoder::nullString() : Encoder::encodeBulkString($value);
+        $dataSet = KeyValues::get($params[0]);
+        
+        $retStr = is_null($dataSet) ? 
+            Encoder::nullString() : 
+            Encoder::encodeBulkString($dataSet->getValue());
+
         return [$retStr];
     }
 }
