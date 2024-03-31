@@ -17,6 +17,7 @@ use app\Redis\Commands\TypeCommand;
 use app\Redis\Commands\WaitCommand;
 use app\Redis\Commands\XaddCommand;
 use app\Redis\Commands\PsyncCommand;
+use app\Redis\Commands\XreadCommand;
 use app\Redis\Commands\ConfigCommand;
 use app\Redis\Commands\XrangeCommand;
 use app\Redis\master\MasterPropagate;
@@ -94,6 +95,9 @@ class Redis {
                 break;
             case "XRANGE":
                 $ret = XrangeCommand::execute($this->params);
+                break;
+            case "XREAD":
+                $ret = XreadCommand::execute($this->params);
                 break;
         }
 
