@@ -8,7 +8,6 @@ use app\KeyValues;
 
 class KeysCommand {
     public static function execute(array $params): array {
-        print_r($params);
         $ret = null;
 
         switch ($params[0]) {
