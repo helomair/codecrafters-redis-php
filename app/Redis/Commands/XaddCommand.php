@@ -10,6 +10,7 @@ class XaddCommand {
     public static function execute(array $params): array {
         $key = $params[0];
         $id  = $params[1];
+        $err = "";
 
         $values = [];
         for($i = 2; $i < count($params); $i += 2) {
@@ -19,9 +20,17 @@ class XaddCommand {
             $values[$entryKey] = $entryvalue;
         }
 
-        $newStreamData = new StreamData($id, $values);
-        KeyValues::set($key, $newStreamData, -1, 'stream');
+        $dataSet = KeyValues::get($key);
+        if (is_null($dataSet)) {
+            $newStreamData = new StreamData($id, $values);
+            KeyValues::set($key, $newStreamData, -1, 'stream');
+        }
+        else if ($dataSet->getType() === 'stream') {
+            $streamData = $dataSet->getValue(); // StreamData
+            $err = $streamData->addEntry($id, $values);
+        }
 
-        return [Encoder::encodeSimpleString($id)];
+        $retStr = (empty($err)) ? Encoder::encodeSimpleString($id): Encoder::encodeErrorString($err);
+        return [$retStr];
     }
 }
