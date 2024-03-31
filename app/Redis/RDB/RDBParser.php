@@ -8,15 +8,15 @@ use app\KeyValues;
 class RDBParser {
     private const EOF = 'ff';
     private const SELECT_DB = 'fe';
-    private const EXPIRE_TIME = 'fd';
-    private const EXPIRE_TIME_MS = 'fc';
+    private const EXPIRE_IN_SECOND = 'fd';
+    private const EXPIRE_IN_MILLISECOND = 'fc';
     private const RESIZE_DB = 'fb';
     private const AUX = 'fa';
     private const OpCodes = [
         self::EOF,
         self::SELECT_DB,
-        self::EXPIRE_TIME,
-        self::EXPIRE_TIME_MS,
+        self::EXPIRE_IN_SECOND,
+        self::EXPIRE_IN_MILLISECOND,
         self::RESIZE_DB,
         self::AUX,
     ];
@@ -114,11 +114,14 @@ class RDBParser {
 
         $this->echoNowContent();
 
-        while( ($nowHex = $this->getNowHexString()) && !in_array($nowHex, self::OpCodes) ) {
-            $nowHexString = $this->getNowHexString();
-            $nowDec = hexdec($nowHexString);
+        while( ($nowHex = $this->getNowHexString()) && ($nowHex !== self::EOF) && ($nowHex !== self::SELECT_DB) ) {
 
-            echo "Hex: {$nowHexString}, Dec: {$nowDec}\n\n";
+            $expiredAt = $this->parseExpireAt();
+
+            $nowHex = $this->getNowHexString();
+            $nowDec = hexdec($nowHex);
+
+            echo "Hex: {$nowHex}, Dec: {$nowDec}\n\n";
 
             switch ($nowDec) {
                 case ValueType::STRING:
@@ -127,7 +130,7 @@ class RDBParser {
 
                     echo "!!!  Key: {$key}, Value: {$value}  !!!\n";
 
-                    KeyValues::setToSelectedDB($this->dbNumber, $key, $value);
+                    KeyValues::setToSelectedDB($this->dbNumber, $key, $value, $expiredAt);
                     break;
             }
 
@@ -135,6 +138,39 @@ class RDBParser {
         }
 
         echo "\n    End parse Key Value Pair\n\n";
+    }
+
+    private function parseExpireAt(): int {
+        $nowHex = $this->getNowHexString();
+        
+        if ( ($nowHex !== self::EXPIRE_IN_SECOND) && ($nowHex !== self::EXPIRE_IN_MILLISECOND) )
+            return -1;
+
+        $readByteCounts = ($nowHex === self::EXPIRE_IN_SECOND) ? 4 : 8;
+        $this->ptrNext(); // shift to bytes' start.
+        $retval = $this->readBytesInCountsAsDecNum($readByteCounts);
+        $this->ptrNext();
+        return $retval;
+    }
+
+    private function readBytesInCountsAsDecNum(int $counts): int {
+        echo "\n    Start read Bytes In Counts As DecNum\n\n";
+        
+        echo "Counts: {$counts}\n";
+        $this->echoNowContent();
+
+        $bytes = array_slice($this->dbContents, $this->ptr, $counts);
+        $actualBytesInLittleEndian = array_reverse($bytes);
+        $bytesInString = implode($actualBytesInLittleEndian);
+
+        echo "Get Bytes: {$bytesInString}\n";
+
+        for($i = 0; $i < $counts - 1; $i++)
+            $this->ptrNext();
+
+        echo "\n    End read Bytes In Counts As DecNum\n\n";
+
+        return intval(base_convert($bytesInString, 16, 10));
     }
 
     private function parseStringEncoding(): string {
@@ -150,13 +186,13 @@ class RDBParser {
         foreach($contents as $hex) {
             $str .= chr(hexdec($hex));
         }
-        echo "parse String content: {$str}\n";
 
         // skip the string contents.
         for($i = 0; $i < $length - 1; $i++) {
             $this->ptrNext();
         }
 
+        echo "parse String content: {$str}\n";
         echo "\n    End parse String Encoding\n\n";
 
         return $str;
