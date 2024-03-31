@@ -9,30 +9,49 @@ class XreadCommand {
     public static function execute(array $params): array {
         $type = $params[0];
         $ret = [];
-        print_r($params);
+        // print_r($params);
         switch ($type) {
             case 'streams':
-                $ret = self::readStreams($params);
+                $ret = self::parseKeyRangeAndReadStreams(array_slice($params, 1));
                 break;
+        }
+
+        // print_r($ret);
+        // print_r("\n");
+        // print_r(Encoder::encodeArrayString($ret));
+
+
+        return [Encoder::encodeArrayString($ret)];
+    }
+
+    private static function parseKeyRangeAndReadStreams(array $params): array {
+        $ret = [];
+
+        // param1 param2 start1 start2, jump = 2.
+        $paramCounts = count($params);
+        $jump = $paramCounts / 2;
+        for($i = 0; $i < $paramCounts - $jump; $i++) {
+            $key = $params[$i];
+            $startID = $params[ $i+$jump ];
+
+            $ret[] = self::readStreams($key, $startID);
         }
 
         return $ret;
     }
 
-    private static function readStreams(array $params) {
-        $key = $params[1];
+    private static function readStreams(string $key, string $startID) {
         $dataSet = KeyValues::get($key);
         $streamData = is_null($dataSet) ? null : $dataSet->getValue();
         if (empty($streamData)) {
             return [];
         }
 
-        $startID = self::makeActualID($params[2]);
+        $startID = self::makeActualID($startID);
 
         [$startMs, $startSeq] = explode('-', $startID);
 
-        $ret = [];
-        $thisKeyStreams = [$key];
+        $ret = [$key];
         foreach($streamData->getEntries() as $id => $values) {
             [$nowMs, $nowSeq] = explode('-', $id);
 
@@ -49,16 +68,9 @@ class XreadCommand {
                 $flattenValues[] = $innerKey;
                 $flattenValues[] = $value;
             }
-            $thisKeyStreams[] = [ [$id, $flattenValues] ];
+            $ret[] = [ [$id, $flattenValues] ];
         }
-
-        $ret[] = $thisKeyStreams;
-
-        print_r($ret);
-        print_r("\n");
-        print_r(Encoder::encodeArrayString($ret));
-
-        return [Encoder::encodeArrayString($ret)];
+        return $ret;
     }
 
     private static function makeActualID(string $id): string {
