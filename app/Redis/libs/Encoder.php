@@ -10,6 +10,10 @@ class Encoder {
     }
 
     public static function encodeArrayString(array $datas): string {
+        if (empty($datas)) {
+            return self::nullString();
+        }
+
         $counts = count($datas);
 
         $ret = "*{$counts}\r\n";

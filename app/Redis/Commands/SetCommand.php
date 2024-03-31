@@ -7,7 +7,7 @@ use app\Redis\libs\Encoder;
 use app\KeyValues;
 
 class SetCommand {
-    public static function execute(array $params): array {
+    public static function execute(array $params): string {
         // ! Race condition?
         $key = $params[0];
         $value = $params[1];
@@ -19,6 +19,6 @@ class SetCommand {
         }
 
         KeyValues::set($key, $value, $expiredAt);
-        return Config::isMaster() ? [Encoder::encodeSimpleString("OK")] : [];
+        return Config::isMaster() ? Encoder::encodeSimpleString("OK") : "";
     }
 }

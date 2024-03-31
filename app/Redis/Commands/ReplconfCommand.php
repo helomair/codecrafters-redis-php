@@ -7,13 +7,13 @@ use app\Redis\libs\Encoder;
 use app\KeyValues;
 
 class ReplconfCommand {
-    public static function execute(array $params, $requestedSocket): array {
-        $ret = [Encoder::encodeSimpleString("OK")];
+    public static function execute(array $params): string {
+        $ret = Encoder::encodeSimpleString("OK");
 
         $type = $params[0];
         switch ($type) {
             case 'listening-port':
-                self::listeningPort($requestedSocket);
+                self::listeningPort();
                 break;
 
             case 'GETACK':
@@ -24,20 +24,20 @@ class ReplconfCommand {
         return $ret;
     }
 
-    private static function listeningPort($requestedSocket): void {
+    private static function listeningPort(): void {
         $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
         $slaveConns[] = [
-            'conn' => $requestedSocket,
+            'conn' => Config::getSocket(KEY_NOW_RUNNING_SOCKET),
             'propagates' => 0
         ];
         Config::setArray(KEY_REPLICA_CONNS, $slaveConns);
         print_r("Connected Slave : ");
-        print_r($requestedSocket);
+        print_r(Config::getSocket(KEY_NOW_RUNNING_SOCKET));
         print_r("\n");
     }
 
-    private static function GETACK(): array {
+    private static function GETACK(): string {
         $datas = ['REPLCONF', 'ACK', Config::getString(KEY_MASTER_REPL_OFFSET)];
-        return [Encoder::encodeArrayString($datas)];
+        return Encoder::encodeArrayString($datas);
     }
 }

@@ -7,7 +7,7 @@ use app\Redis\libs\Encoder;
 use app\Redis\Datas\StreamData;
 
 class XaddCommand {
-    public static function execute(array $params): array {
+    public static function execute(array $params): string {
         $key = $params[0];
         $id  = $params[1];
         $err = "";
@@ -32,6 +32,6 @@ class XaddCommand {
         }
 
         $retStr = (empty($err)) ? Encoder::encodeSimpleString($id): Encoder::encodeErrorString($err);
-        return [$retStr];
+        return $retStr;
     }
 }

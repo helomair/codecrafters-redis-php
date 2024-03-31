@@ -6,7 +6,7 @@ use app\Config;
 use app\Redis\libs\Encoder;
 
 class WaitCommand {
-    public static function execute(array $params): array {
+    public static function execute(array $params): string {
         $numreplicas = intval($params[0]);
         $timeout = microtime(true) * 1000 + intval($params[1]);
         
@@ -34,7 +34,7 @@ class WaitCommand {
         }
 
         Config::resetReplicaPropagates();
-        return [Encoder::encodeIntegerString($dones)];
+        return Encoder::encodeIntegerString($dones);
     }
 
     private static function contactSlavesAndGetDones(array &$slaveConns): int {

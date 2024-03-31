@@ -7,7 +7,7 @@ use app\Redis\libs\Encoder;
 use app\KeyValues;
 
 class KeysCommand {
-    public static function execute(array $params): array {
+    public static function execute(array $params): string {
         $ret = null;
 
         switch ($params[0]) {
@@ -15,6 +15,6 @@ class KeysCommand {
                 $ret = KeyValues::getKeys();
         }
 
-        return is_null($ret) ? [] : [Encoder::encodeArrayString($ret)];
+        return is_null($ret) ? "" : Encoder::encodeArrayString($ret);
     }
 }

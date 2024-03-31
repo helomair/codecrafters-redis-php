@@ -7,9 +7,9 @@ use app\Redis\libs\Encoder;
 use app\KeyValues;
 
 class TypeCommand {
-    public static function execute(array $params): array {
+    public static function execute(array $params): string {
         $dataSet = KeyValues::get($params[0]);
         $retStr = is_null($dataSet) ? 'none' : $dataSet->getType();
-        return [Encoder::encodeSimpleString($retStr)];
+        return Encoder::encodeSimpleString($retStr);
     }
 }

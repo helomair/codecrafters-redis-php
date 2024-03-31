@@ -2,26 +2,40 @@
 
 namespace app\Redis\Commands;
 
+use app\Config;
+use app\JobQueue;
 use app\KeyValues;
 use app\Redis\libs\Encoder;
 
 class XreadCommand {
-    public static function execute(array $params): array {
-        $type = $params[0];
-        $ret = [];
-        // print_r($params);
+    public static function execute(array $params): ?string {
+        return  self::handleSubCommands($params[0], array_slice($params, 1));        
+    }
+
+    public static function handleSubCommands(string $type, array $params): ?string {
+        $ret = "";
         switch ($type) {
             case 'streams':
-                $ret = self::parseKeyRangeAndReadStreams(array_slice($params, 1));
+                $ret = self::parseKeyRangeAndReadStreams($params);
+                $ret = Encoder::encodeArrayString($ret);
+                break;
+            case 'block':
+                $sleepTimeMs = intval($params[0]);
+                JobQueue::add(
+                    [self::class, 'handleSubCommands'], // callable
+                    ['streams', array_slice($params, 2)],
+                    Config::getSocket(KEY_NOW_RUNNING_SOCKET),
+                    round(microtime(true) * 1000) + $sleepTimeMs
+                );
+
+                $ret = null;
                 break;
         }
 
-        // print_r($ret);
-        // print_r("\n");
-        // print_r(Encoder::encodeArrayString($ret));
+        print_r($ret);
+        print_r("\n");
 
-
-        return [Encoder::encodeArrayString($ret)];
+        return $ret;
     }
 
     private static function parseKeyRangeAndReadStreams(array $params): array {
@@ -33,8 +47,11 @@ class XreadCommand {
         for($i = 0; $i < $paramCounts - $jump; $i++) {
             $key = $params[$i];
             $startID = $params[ $i+$jump ];
+            $streams = self::readStreams($key, $startID);
 
-            $ret[] = self::readStreams($key, $startID);
+            if (empty($streams)) continue;
+
+            $ret[] = $streams;
         }
 
         return $ret;
@@ -51,7 +68,7 @@ class XreadCommand {
 
         [$startMs, $startSeq] = explode('-', $startID);
 
-        $ret = [$key];
+        $ret = [];
         foreach($streamData->getEntries() as $id => $values) {
             [$nowMs, $nowSeq] = explode('-', $id);
 
@@ -68,9 +85,10 @@ class XreadCommand {
                 $flattenValues[] = $innerKey;
                 $flattenValues[] = $value;
             }
-            $ret[] = [ [$id, $flattenValues] ];
+            $ret[] = [$id, $flattenValues];
         }
-        return $ret;
+
+        return (empty($ret)) ? [] : [$key, $ret];
     }
 
     private static function makeActualID(string $id): string {

@@ -13,6 +13,10 @@ class Config {
         return self::$configs;
     }
 
+    public static function getSocket(string $key) {
+        return self::$configs[$key];
+    }
+
     public static function getAllStrings(): array {
         $ret = [];
 
@@ -50,6 +54,10 @@ class Config {
         }
 
         return intval($ret);
+    }
+
+    public static function setSocket(string $key, $socket): void {
+        self::$configs[$key] = $socket;
     }
 
     public static function setArray(string $key, array $values): void {

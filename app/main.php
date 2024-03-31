@@ -26,6 +26,7 @@ define('KEY_MASTER_REPL_OFFSET', 'master_repl_offset');
 define('KEY_MASTER_HOST', 'master_host');
 define('KEY_MASTER_PORT', 'master_port');
 define('KEY_MASTER_SOCKET', 'master_socket');
+define('KEY_NOW_RUNNING_SOCKET', 'now_running_socket');
 
 function makeSelfListeningSocket() {
     $port = intval(Config::getString(KEY_SELF_PORT));
@@ -54,7 +55,7 @@ function makeSelfListeningSocket() {
 
 function sendResponses(array $responses, $socket) {
     foreach($responses as $response) {
-        foreach ($response as $text) 
+        foreach ($response as $text)
             socket_write($socket, $text);
     }
 }
@@ -95,7 +96,7 @@ $selfListeningSocket = makeSelfListeningSocket();
 socket_set_nonblock($selfListeningSocket);
 
 $slaveToMasterSocket = Config::isMaster() ? null : SlaveHandshake::start();
-Config::setArray(KEY_MASTER_SOCKET, [$slaveToMasterSocket]);
+Config::setSocket(KEY_MASTER_SOCKET, $slaveToMasterSocket);
 
 $socketPool = !is_null($slaveToMasterSocket) ? [$slaveToMasterSocket] : [];
 $redis = new Redis();
@@ -126,11 +127,15 @@ while (true) {
 
         $inputStr = $inputStrAndSocket[0];
         $socket = $inputStrAndSocket[1];
-        $responses = $redis->handle($inputStr, $socket);
+        Config::setSocket(KEY_NOW_RUNNING_SOCKET, $socket);
+        $responses = $redis->handle($inputStr);
         // KeyValues::getAll();
 
-        sendResponses($responses, $socket);
-
+        if (!is_null($responses)) {
+            sendResponses($responses, $socket);
+        }
     }
+
+    JobQueue::consumeJobs();
 }
 // socket_close($originSocket);

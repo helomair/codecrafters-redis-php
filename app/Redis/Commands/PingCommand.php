@@ -7,7 +7,7 @@ use app\Redis\libs\Encoder;
 use app\KeyValues;
 
 class PingCommand {
-    public static function execute(): array {
-        return Config::isMaster() ? [Encoder::encodeSimpleString("PONG")] : [];
+    public static function execute(): string {
+        return Config::isMaster() ? Encoder::encodeSimpleString("PONG") : "";
     }
 }

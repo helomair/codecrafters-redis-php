@@ -7,8 +7,8 @@ use app\Redis\libs\Encoder;
 use app\KeyValues;
 
 class EchoCommand {
-    public static function execute(array $params): array {
+    public static function execute(array $params): string {
         $echoStr = $params[0];
-        return [Encoder::encodeSimpleString($echoStr)];
+        return Encoder::encodeSimpleString($echoStr);
     }
 }

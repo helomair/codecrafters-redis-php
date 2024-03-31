@@ -26,13 +26,12 @@ use app\Redis\Commands\ReplconfCommand;
 class Redis {
     private array  $params = [];
     private string $command = "";
-    private $requestedSocket;
+    // private $requestedSocket;
 
     private const COMMANDS_NO_OFFSET = ['FULLRESYNC'];
 
-    public function handle(string $inputStr, $requestedSocket): array {
+    public function handle(string $inputStr): ?array {
         $parsedInputs = InputParser::init($inputStr)->parse();
-        $this->requestedSocket = $requestedSocket;
 
         $responses = [];
         foreach($parsedInputs as $inputs) {
@@ -45,7 +44,8 @@ class Redis {
             // print_r($this->params);
             // print_r("\n");
 
-            $responses[] = $this->commandExecution();
+            if (!is_null( $response = $this->commandExecution() ))
+                $responses[] = $response;
     
             MasterPropagate::sendParamsToSlave($this->command, $this->params);
             $this->addCommandOffset();
@@ -54,7 +54,7 @@ class Redis {
         return $responses;
     }
 
-    private function commandExecution(): array {
+    private function commandExecution(): ?array {
         $ret = [];
         switch ($this->command) {
             case "PING":
@@ -73,10 +73,10 @@ class Redis {
                 $ret = InfoCommand::execute();
                 break;
             case "REPLCONF":
-                $ret = ReplconfCommand::execute($this->params, $this->requestedSocket);
+                $ret = ReplconfCommand::execute($this->params);
                 break;
             case "PSYNC":
-                $ret = PsyncCommand::execute();
+                $ret = PsyncCommand::execute(); // array
                 break;
             case "WAIT":
                 $ret = WaitCommand::execute($this->params);
@@ -101,7 +101,9 @@ class Redis {
                 break;
         }
 
-        return $ret;
+        if (is_null($ret)) return null;
+        
+        return is_array($ret) ? $ret : [$ret];
     }
 
     private function addCommandOffset(): void {
@@ -110,8 +112,8 @@ class Redis {
 
         $originInputStr = Encoder::encodeArrayString([$this->command, ...$this->params]);
 
-        $socket = $this->requestedSocket;
-        $slaveToMasterSocket = Config::getArray(KEY_MASTER_SOCKET)[0];
+        $socket = Config::getSocket(KEY_NOW_RUNNING_SOCKET);
+        $slaveToMasterSocket = Config::getSocket(KEY_MASTER_SOCKET);
 
         if ( !is_null($slaveToMasterSocket) && ($socket === $slaveToMasterSocket) ) {
             $bytes = strlen($originInputStr);

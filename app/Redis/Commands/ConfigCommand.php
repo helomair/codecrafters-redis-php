@@ -6,10 +6,10 @@ use app\Config;
 use app\Redis\libs\Encoder;
 
 class ConfigCommand {
-    public static function execute(array $params): array {
+    public static function execute(array $params): string {
         $subCommand = strtoupper($params[0]);
 
-        $ret = [];
+        $ret = "";
         switch ($subCommand) {
             case 'GET':
                 $ret = self::GET($params[1]);
@@ -19,9 +19,9 @@ class ConfigCommand {
         return $ret;
     }
 
-    public static function GET(string $key) {
+    private static function GET(string $key): string {
         $value = Config::getString($key);
 
-        return [Encoder::encodeArrayString([$key, $value])];
+        return Encoder::encodeArrayString([$key, $value]);
     }
 }

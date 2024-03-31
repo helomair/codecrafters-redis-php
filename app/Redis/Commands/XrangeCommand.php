@@ -6,12 +6,12 @@ use app\KeyValues;
 use app\Redis\libs\Encoder;
 
 class XrangeCommand {
-    public static function execute(array $params): array {
+    public static function execute(array $params): string {
         $key = $params[0];
         $dataSet = KeyValues::get($key);
         $streamData = is_null($dataSet) ? null : $dataSet->getValue();
         if (empty($streamData)) {
-            return [];
+            return "";
         }
         
         $startID = self::makeActualID($params[1]);
@@ -43,7 +43,7 @@ class XrangeCommand {
             $ret[] = [ $id, $flattenValues ];
         }
 
-        return [Encoder::encodeArrayString($ret)];
+        return Encoder::encodeArrayString($ret);
     }
 
     private static function makeActualID(string $id): string {
