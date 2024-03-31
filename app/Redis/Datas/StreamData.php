@@ -4,8 +4,8 @@ namespace app\Redis\Datas;
 
 
 class StreamData {
-    // private int $lastEntryId_MS = 0;
-    // private int $lastEntryId_SeqNumber = 0;
+    private int $lastEntryId_MS = 0;
+    private int $lastEntryId_SeqNumber = 0;
 
     private array $entries = [];
 
@@ -16,47 +16,58 @@ class StreamData {
             return [ $id, "ERR The ID specified in XADD must be greater than 0-0" ];
         }
 
-        // $ms_seq = explode("-", $id);
+        [$newMs, $newSeq] = $this->getNewMsAndSeq($id);
+
         // ! Race Condition.
-        if ( $id = $this->validateID($id) ) {
+
+        // $newMs = intval($newMs);
+
+        // if ($newSeq === "*") {
+        //     if ($newMs === $this->lastEntryId_MS)
+        //         $newSeq = $this->lastEntryId_SeqNumber + 1;
+        //     else 
+        //         $newSeq = 0;
+        // } else {
+        //     $newSeq = intval($newSeq);
+        // }
+
+        if ( 
+            ($newMs > $this->lastEntryId_MS) ||
+            ($newMs === $this->lastEntryId_MS && $newSeq > $this->lastEntryId_SeqNumber) 
+        ) {
             $errMsg = "";
+            $id = "{$newMs}-{$newSeq}";
+
             $this->entries[$id] = $values;
+            $this->lastEntryId_MS = $newMs;
+            $this->lastEntryId_SeqNumber = $newSeq;
         } 
 
-        return [ $id, $errMsg ];
+        return [$id, $errMsg];
     }
 
     public function get(string $id): array {
         return $this->entries[$id];
     }
 
-    private function validateID(string $id): string{
+    private function getNewMsAndSeq(string $id): array {
+        $ms_seq = explode("-", $id);
 
-        $latestID = array_key_last($this->entries) ?? "0-0";
+        // ! Race Condition.
 
-        // ! Need check ms_seq len is 2
-        [$newMs, $newSeq] = explode("-", $id);
-        [$latestMs, $latestSeq] = explode("-", $latestID);
+        // print_r(microtime(true));
+        $newMs = ($ms_seq[0] === "*") ? round(microtime(true) * 1000) : intval($ms_seq[0]);
 
-        $latestMs = intval($latestMs);
-        $latestSeq = intval($latestSeq);
-
-        $newMs = intval($newMs);
-
+        $newSeq = $ms_seq[1] ?? "*";
         if ($newSeq === "*") {
-            if ($newMs === $latestMs)
-                $newSeq = $latestSeq + 1;
+            if ($newMs === $this->lastEntryId_MS)
+                $newSeq = $this->lastEntryId_SeqNumber + 1;
             else 
                 $newSeq = 0;
         } else {
             $newSeq = intval($newSeq);
         }
 
-        if ( ($newMs > $latestMs) || ($newMs === $latestMs && $newSeq > $latestSeq) )
-            $id = "{$newMs}-{$newSeq}";
-        else 
-            $id = "";
-
-        return $id;
+        return [$newMs, $newSeq];
     }
 }
