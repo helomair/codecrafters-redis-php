@@ -8,16 +8,16 @@ use app\Redis\libs\Encoder;
 
 class WaitCommand {
     public static function execute(array $params): ?string {
-        $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
-        $dones = self::contactSlavesAndGetDones($slaveConns);
+        $dones = self::contactSlavesAndGetDones();
 
         $param = new WaitLoopJobParam();
         $param->numreplicas     = intval($params[0]);
-        $param->timeout         = round(microtime(true) * 1000) + intval($params[1]);
-        $param->slaveSockets    = $slaveConns;
+        $param->timeout         = ceil(microtime(true) * 1000) + intval($params[1]);
+        $param->slaveSockets    = Config::getArray(KEY_REPLICA_CONNS);
         $param->dones           = $dones;
         $param->requestedSocket = Config::getSocket(KEY_NOW_RUNNING_SOCKET);
 
+        print_r(Config::getArray(KEY_REPLICA_CONNS));
 
         JobQueue::add(
             [self::class, 'waitingLoop'],
@@ -28,10 +28,10 @@ class WaitCommand {
         return null;
     }
 
-    private static function contactSlavesAndGetDones(array &$slaveConns): int {
-        $dones = count($slaveConns);
+    private static function contactSlavesAndGetDones(): int {
+        $dones = count(Config::getArray(KEY_REPLICA_CONNS));
 
-        foreach($slaveConns as $connInfo) {
+        foreach(Config::getArray(KEY_REPLICA_CONNS) as $connInfo) {
             if ($connInfo['propagates'] === 0) continue;
 
             $dones = 0;
@@ -49,8 +49,9 @@ class WaitCommand {
         $timeout         = $param->timeout;
         $requestedSocket = $param->requestedSocket;
 
-        if ( empty($slaveConns) || ($param->dones >= $numreplicas) || ($timeout < round(microtime(true) * 1000)) ) {
+        if ( empty($slaveConns) || ($param->dones >= $numreplicas) || ($timeout < ceil(microtime(true) * 1000)) ) {
             print_r("Step1\n");
+            print_r("timeout: {$timeout}, nowTime: " . round(microtime(true) * 1000) . "\n");
             Config::resetReplicaPropagates();
             return Encoder::encodeIntegerString($param->dones); // Stop job
         }
@@ -60,8 +61,9 @@ class WaitCommand {
             $ack = socket_read($conn, 1024);
 
             if (!empty($ack)) {
+                print_r($ack . "\n");
                 $param->dones++;
-                unset($param->slaveSockets[$index]);
+                unset($slaveConns[$index]);
             }
 
             if ($param->dones >= $numreplicas) {
@@ -70,6 +72,8 @@ class WaitCommand {
                 return Encoder::encodeIntegerString($param->dones); // Stop job
             }
         }
+
+        $param->slaveSockets = $slaveConns;
 
         JobQueue::add(
             [self::class, 'waitingLoop'],
