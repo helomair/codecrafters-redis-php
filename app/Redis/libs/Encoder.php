@@ -54,7 +54,7 @@ class Encoder {
     }
 
     public static function encodeIntegerString(int $value): string {
-        $neg = ($value < 0) ? "-" : "+";
+        $neg = ($value < 0) ? "-" : "";
         return ":{$neg}{$value}\r\n";
     }
 

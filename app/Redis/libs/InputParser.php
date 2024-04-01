@@ -3,10 +3,11 @@
 namespace app\Redis\libs;
 
 class InputParser {
+    private int    $ptr = 0;
     private string $originInputString;
-    private array $inputs;
-    private array $resultParams = [];
-    private const STRING_BEGIN_SYMBOLS = [ '*', '+', '$' ];
+    private array  $inputs;
+    private array  $resultParams = [];
+    private const  STRING_BEGIN_SYMBOLS = [ '*', '+', '$' ];
 
     private function __construct(string $input) {
         $this->originInputString = $input;
@@ -17,72 +18,103 @@ class InputParser {
     }
 
     public function parse() {
-        for($i = 0; $i < count($this->inputs); $i++) {
-            $input = $this->inputs[$i];
+        while($this->ptr < count($this->inputs)) {
+            $inputStr = $this->getNowStr();
 
-            if (empty($input)) continue;
+            if (empty($inputStr)) {
+                $this->ptr++;
+                continue;
+            }
 
-            $symbol = $input[0];
+            $symbol = $inputStr[0];
             switch ($symbol) {
                 case '*':
-                    $itemCounts = intval($input[1]) * 2; // $? PARAM
-                    $this->parseArray(array_slice($this->inputs, $i + 1, $itemCounts));
-                    $i += $itemCounts;
+                    $this->parseArray();
                     break;
 
                 case '+':
-                    $this->parseSimpleString($input);
+                    $this->parseSimpleString();
                     break;
 
                 case '$':
-                    $this->parseBulkString($i);
+                    $this->parseBulkString();
                     break;
             }
+
+            $this->ptr++;
         }
 
         return $this->resultParams;
     }
 
-    private function parseArray(array $items) {
-        // ['$?', 'PARAM1', '$?', 'PARAM2', ...]
+    private function getNowStr(): string {
+        return $this->inputs[$this->ptr];
+    }
+
+    private function parseArray() {
+        //? parse *3, an item is "$5\r\nPARAM\r\n"
+        $counts = intval(substr($this->getNowStr(), 1)) * 2;
+        $items = array_slice($this->inputs, $this->ptr + 1, $counts);
+
         $params = [];
         foreach($items as $inputStr) {
             if (preg_match("/\\$\d+/", $inputStr, $m)) continue;
             $params[] = $inputStr;
         }
         $this->resultParams[] = $params;
+
+        $this->ptr += $counts;
     }
 
-    private function parseSimpleString(string $input) {
-        $input = substr($input, 1); // Remove first '+' symbol.
-
+    private function parseSimpleString() {
+        $input = $this->getNowStr();
         $params = [];
-        foreach(explode(" ", $input) as $str) {
+        foreach(explode(" ", substr($input, 1)) as $str) { // Remove first '+' symbol.
             $params[] = $str;
         }
 
         $this->resultParams[] = $params;
     }
 
-    private function parseBulkString(int &$index) {
-        // ['$?', 'STRING1'] or ['$?', 'STRING1INPUT'] if is RDB file
-        $lengthCheck = intval(str_replace("$", '', $this->inputs[$index]));
-        $contentLength = strlen($this->inputs[ $index + 1 ]);
-
-        // ! Do nothing for BulkString right now.
-        if ($contentLength <= $lengthCheck)
+    private function parseBulkString() {
+        if ($this->isRegularBulkString()) // ! Do nothing for BulkString right now.
             return;
 
-        $fileContent = $this->inputs[$index + 1];
+        $this->tryRemoveRDBFileContentAndRerunInput();
+    }
+
+    private function isRegularBulkString() {
+        $input = $this->getNowStr();
+        $lengthCheck = intval(str_replace("$", '', $input));
+
+        $this->ptr++;
+        $nextInput = $this->getNowStr();
+        $stringLength = strlen($nextInput);
+        $this->ptr--;
+
+        return ($lengthCheck >= $stringLength);
+    }
+
+    private function tryRemoveRDBFileContentAndRerunInput() {
+        // ? Since RDBFile content is bulk string but not end with \r\n,
+        // ?   there might be $85\r\n{RDBFile_content...}*3\r\n...
+        // ?   next command is spliced at the end.
+        $this->ptr++;
+
+        $fileContent = $this->getNowStr();
+        $length = strlen($fileContent);
         $newText = "";
-        for($i = $contentLength - 1; $i >= 0; $i--) {
+        for($i = $length - 1; $i >= 0; $i--) {
             $char = $fileContent[$i];
             $newText = $char . $newText;
+
             if (in_array($char, self::STRING_BEGIN_SYMBOLS))
                 break;
         }
-        $this->inputs[$index + 1] = $newText;
 
-        $index --; // Rerun this input.
+        if (!empty($newText)) {
+            $this->inputs[ $this->ptr ] = $newText;
+            $this->ptr --; // Rerun this input.
+        }
     }
 }

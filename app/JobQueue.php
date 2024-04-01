@@ -28,7 +28,7 @@ class JobQueue {
             unset(self::$jobs[$index]);
 
             if (!$ret) continue;
-            print_r($ret);
+            // print_r($ret);
             socket_write($infos['socket'], $ret);
         }
     }

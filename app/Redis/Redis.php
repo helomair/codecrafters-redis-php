@@ -40,10 +40,6 @@ class Redis {
             $this->command = strtoupper($inputs[0]);
             $this->params = array_slice($inputs, 1);
 
-            // print_r($this->command . " =>  ");
-            // print_r($this->params);
-            // print_r("\n");
-
             if (!is_null( $response = $this->commandExecution() ))
                 $responses[] = $response;
     

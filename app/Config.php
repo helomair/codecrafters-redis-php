@@ -69,7 +69,7 @@ class Config {
     }
 
     public static function resetReplicaPropagates() {
-        $slaveConns = self::$configs[KEY_REPLICA_CONNS];
+        $slaveConns = self::$configs[KEY_REPLICA_CONNS] ?? [];
         foreach($slaveConns as &$connInfo) {
             $connInfo['propagates'] = 0;
         }

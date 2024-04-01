@@ -8,8 +8,7 @@ use app\Redis\libs\Encoder;
 class XrangeCommand {
     public static function execute(array $params): string {
         $key = $params[0];
-        $dataSet = KeyValues::get($key);
-        $streamData = is_null($dataSet) ? null : $dataSet->getValue();
+        $streamData = KeyValues::getStreamData($key);
         if (empty($streamData)) {
             return "";
         }
@@ -27,11 +26,11 @@ class XrangeCommand {
             if ( ($startMs > $nowMs) || ($endID !== '0-0' && $endMs < $nowMs) )
                 continue;
 
-            // Ms in range, check Seq.
-            // start: a-10 vs now: a-0
+            // ? Ms in range, check Seq.
+            // ? start: a-10 vs now: a-0
             if ($startMs === $nowMs && $startSeq > $nowSeq) 
                 continue;
-            // end: a-0 vs now: a-10
+            // ? end: a-0 vs now: a-10
             if ( ($endID !== '0-0') && ($endMs === $nowMs) && ($endSeq < $nowSeq) ) 
                 continue;
             

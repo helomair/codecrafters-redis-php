@@ -19,9 +19,8 @@ class StreamData {
         // ! Race Condition.
         [$newMs, $newSeq] = $this->getNewMsAndSeq($id);
 
-        if ( 
-            ($newMs > $this->lastEntryId_MS) ||
-            ($newMs === $this->lastEntryId_MS && $newSeq > $this->lastEntryId_SeqNumber) 
+        if ( ($newMs > $this->lastEntryId_MS) ||
+             ($newMs === $this->lastEntryId_MS && $newSeq > $this->lastEntryId_SeqNumber) 
         ) {
             $errMsg = "";
             $id = "{$newMs}-{$newSeq}";
@@ -34,31 +33,26 @@ class StreamData {
         return [$id, $errMsg];
     }
 
-    public function get(string $id): array {
-        return $this->entries[$id];
+    public function getEntryCounts(): int {
+        return count($this->entries);
     }
 
     public function getEntries(): array {
         return $this->entries;
     }
 
+
     private function getNewMsAndSeq(string $id): array {
         $ms_seq = explode("-", $id);
 
         // ! Race Condition.
 
-        $newMs = ($ms_seq[0] === "*") ? round(microtime(true) * 1000) : intval($ms_seq[0]);
+        $Ms = ($ms_seq[0] === "*") ? round(microtime(true) * 1000) : intval($ms_seq[0]);
 
-        $newSeq = $ms_seq[1] ?? "*";
-        if ($newSeq === "*") {
-            if ($newMs === $this->lastEntryId_MS)
-                $newSeq = $this->lastEntryId_SeqNumber + 1;
-            else 
-                $newSeq = 0;
-        } else {
-            $newSeq = intval($newSeq);
-        }
+        $Seq = $ms_seq[1] ?? "*";
+        $Seq = ($Seq !== "*") ? intval($Seq) :
+            ( ($Ms === $this->lastEntryId_MS) ? ($this->lastEntryId_SeqNumber + 1) : 0 );
 
-        return [$newMs, $newSeq];
+        return [$Ms, $Seq];
     }
 }

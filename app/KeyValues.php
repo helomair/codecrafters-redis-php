@@ -2,6 +2,8 @@
 
 namespace app;
 
+use app\Redis\Datas\StreamData;
+
 class KeyValues {
     /**
      * @param DataSet
@@ -15,6 +17,9 @@ class KeyValues {
         print_r(self::$keyValue);
     }
 
+    /**
+     * DB
+     */
     public static function getDBNum(): int {
         return self::$dbNumber;
     }
@@ -23,10 +28,32 @@ class KeyValues {
         self::$dbNumber = $number;
     }
 
+
+
+
+    /**
+     * Set
+     */
     public static function set(string $key, $value, int $expiredAt = -1, string $type = 'string'): void {
         // ! Race condition?
         $newData = new DataSet($value, $expiredAt, $type);
         self::$keyValue[self::$dbNumber][$key] = $newData;
+    }
+
+
+
+
+
+    /**Get */
+    public static function getStreamData(string $key): ?StreamData {
+        $dataSet = self::get($key);
+
+        if (is_null($dataSet) || ($dataSet->getType() !== 'stream')) {
+            return null;
+        }
+        else {
+            return $dataSet->getValue();
+        } 
     }
 
     public static function get(string $key): ?DataSet {
@@ -43,6 +70,9 @@ class KeyValues {
         return array_keys(self::$keyValue[self::$dbNumber]);
     }
 }
+
+
+
 
 class DataSet {
     private $value;

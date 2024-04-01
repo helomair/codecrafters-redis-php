@@ -20,18 +20,27 @@ class XaddCommand {
             $values[$entryKey] = $entryvalue;
         }
 
-        $dataSet = KeyValues::get($key);
-        if (is_null($dataSet)) {
-            $newStreamData = new StreamData();
-            [$id, $err] = $newStreamData->addEntry($id, $values);
-            KeyValues::set($key, $newStreamData, -1, 'stream');
-        }
-        else if ($dataSet->getType() === 'stream') {
-            $streamData = $dataSet->getValue(); // StreamData
-            [$id, $err] = $streamData->addEntry($id, $values);
-        }
+        [$id, $err] = self::addEntry($key, $id, $values);
 
         $retStr = (empty($err)) ? Encoder::encodeSimpleString($id): Encoder::encodeErrorString($err);
         return $retStr;
+    }
+
+    /**
+     * @return array [string $id, string $err].
+     */
+    private static function addEntry(string $key, string $id, array $values): array {
+        $streamData = KeyValues::getStreamData($key);
+
+        if (is_null($streamData)) {
+            $newStreamData = new StreamData();
+            $ret = $newStreamData->addEntry($id, $values);
+            KeyValues::set($key, $newStreamData, -1, 'stream');
+        }
+        else {
+            $ret = $streamData->addEntry($id, $values);
+        }
+
+        return $ret;
     }
 }
