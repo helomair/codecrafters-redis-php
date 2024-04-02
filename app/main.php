@@ -103,10 +103,6 @@ $socketPool = !is_null($slaveToMasterSocket) ? [$slaveToMasterSocket] : [];
 $redis = new Redis();
 
 RDBParser::parse();
-// KeyValues::getAll();
-
-// print_r($redis->handle("*1\r\n$4\r\nping\r\n", null));
-// exit(0);
 
 while (true) {
     if ( $newSocket = socket_accept($selfListeningSocket) ) {
@@ -117,7 +113,7 @@ while (true) {
     $infos = [];
     $inJobSockets = Config::getArray(KEY_NOW_IN_JOB_SOCKETS);
     foreach ($socketPool as $index => $socket) {
-        if ( isset($inJobSockets[ strval($socket) ]) ) {
+        if ( isset($inJobSockets[ Helpers::getSocketID($socket) ]) ) {
             continue;
         }
 

@@ -3,8 +3,9 @@
 namespace app\Redis\Commands;
 
 use app\Config;
-use app\Redis\libs\Encoder;
+use app\Helpers;
 use app\KeyValues;
+use app\Redis\libs\Encoder;
 
 class ReplconfCommand {
     public static function execute(array $params): string {
@@ -31,8 +32,8 @@ class ReplconfCommand {
             'propagates' => 0
         ];
         Config::setArray(KEY_REPLICA_CONNS, $slaveConns);
-        print_r("Connected Slave : ");
-        print_r(Config::getSocket(KEY_NOW_RUNNING_SOCKET));
+        print_r("Connected Slave ID: ");
+        print_r( Helpers::getSocketID(Config::getSocket(KEY_NOW_RUNNING_SOCKET)) );
         print_r("\n");
     }
 

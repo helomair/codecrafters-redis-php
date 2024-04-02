@@ -2,6 +2,7 @@
 
 namespace app\Redis\Commands;
 
+use app\Helpers;
 use app\Config;
 use app\JobQueue;
 use app\Redis\libs\Encoder;
@@ -13,12 +14,10 @@ class WaitCommand {
         
         $inJobSockets = [];
         foreach($slaveConns as $connInfo) {
-            $socket = $connInfo['conn'];
-            $inJobSockets[ strval($socket) ] = 1;
+            $connID = Helpers::getSocketID($connInfo['conn']);
+            $inJobSockets[$connID] = 1;
         }
         Config::setArray(KEY_NOW_IN_JOB_SOCKETS, $inJobSockets);
-        print_r($inJobSockets);
-
 
         $param = new WaitLoopJobParam();
         $param->numreplicas     = intval($params[0]);
@@ -26,11 +25,6 @@ class WaitCommand {
         $param->slaveSockets    = $slaveConns;
         $param->dones           = $dones;
         $param->requestedSocket = Config::getSocket(KEY_NOW_RUNNING_SOCKET);
-
-        print_r($param->slaveSockets);
-        print_r($param->requestedSocket);
-        print_r("\n");
-        print_r($param);
 
         JobQueue::add(
             [self::class, 'waitingLoop'],
@@ -78,7 +72,7 @@ class WaitCommand {
             if (!empty($ack)) {
                 $param->dones++;
                 unset($param->slaveSockets[$index]);
-                unset($inJobSockets[ strval($conn) ]);
+                unset($inJobSockets[ Helpers::getSocketID($conn) ]);
             }
 
             if (($param->dones >= $numreplicas) || ($timeout < intval(microtime(true) * 1000))) {
