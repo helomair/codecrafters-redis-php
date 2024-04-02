@@ -8,16 +8,29 @@ use app\Redis\libs\Encoder;
 
 class WaitCommand {
     public static function execute(array $params): ?string {
+        $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
         $dones = self::contactSlavesAndGetDones();
+        
+        $inJobSockets = [];
+        foreach($slaveConns as $connInfo) {
+            $socket = $connInfo['conn'];
+            $inJobSockets[ strval($socket) ] = 1;
+        }
+        Config::setArray(KEY_NOW_IN_JOB_SOCKETS, $inJobSockets);
+        print_r($inJobSockets);
+
 
         $param = new WaitLoopJobParam();
         $param->numreplicas     = intval($params[0]);
-        $param->timeout         = ceil(microtime(true) * 1000) + intval($params[1]);
-        $param->slaveSockets    = Config::getArray(KEY_REPLICA_CONNS);
+        $param->timeout         = intval(microtime(true) * 1000) + intval($params[1]);
+        $param->slaveSockets    = $slaveConns;
         $param->dones           = $dones;
         $param->requestedSocket = Config::getSocket(KEY_NOW_RUNNING_SOCKET);
 
-        print_r(Config::getArray(KEY_REPLICA_CONNS));
+        print_r($param->slaveSockets);
+        print_r($param->requestedSocket);
+        print_r("\n");
+        print_r($param);
 
         JobQueue::add(
             [self::class, 'waitingLoop'],
@@ -38,6 +51,11 @@ class WaitCommand {
             $conn = $connInfo['conn'];
             $context = Encoder::encodeArrayString(['REPLCONF','GETACK','*']);
             socket_write($conn, $context);
+            $ack = socket_read($conn, 1024);
+
+            if (!empty($ack)) {
+                $dones ++;
+            }
         }
 
         return $dones;
@@ -48,38 +66,39 @@ class WaitCommand {
         $slaveConns      = $param->slaveSockets;
         $timeout         = $param->timeout;
         $requestedSocket = $param->requestedSocket;
+        $inJobSockets    = Config::getArray(KEY_NOW_IN_JOB_SOCKETS);
 
-        if ( empty($slaveConns) || ($param->dones >= $numreplicas) || ($timeout < ceil(microtime(true) * 1000)) ) {
-            print_r("Step1\n");
-            print_r("timeout: {$timeout}, nowTime: " . round(microtime(true) * 1000) . "\n");
-            Config::resetReplicaPropagates();
-            return Encoder::encodeIntegerString($param->dones); // Stop job
+        if ( empty($slaveConns) ) {
+            return self::waitLoopEnd($param->dones); // Stop job
         }
 
         foreach($slaveConns as $index => $connInfo) {
             $conn = $connInfo['conn'];
             $ack = socket_read($conn, 1024);
-
             if (!empty($ack)) {
-                print_r($ack . "\n");
                 $param->dones++;
-                unset($slaveConns[$index]);
+                unset($param->slaveSockets[$index]);
+                unset($inJobSockets[ strval($conn) ]);
             }
 
-            if ($param->dones >= $numreplicas) {
-                print_r("Step2\n");
-                Config::resetReplicaPropagates();
-                return Encoder::encodeIntegerString($param->dones); // Stop job
+            if (($param->dones >= $numreplicas) || ($timeout < intval(microtime(true) * 1000))) {
+                return self::waitLoopEnd($param->dones); // Stop job
             }
         }
 
-        $param->slaveSockets = $slaveConns;
+        Config::setArray(KEY_NOW_IN_JOB_SOCKETS, $inJobSockets);
 
         JobQueue::add(
             [self::class, 'waitingLoop'],
             [$param],
             $requestedSocket
         );
+    }
+
+    private static function waitLoopEnd(int $dones): string {
+        Config::resetReplicaPropagates();
+        Config::setArray(KEY_NOW_IN_JOB_SOCKETS, []);
+        return Encoder::encodeIntegerString($dones); 
     }
 }
 

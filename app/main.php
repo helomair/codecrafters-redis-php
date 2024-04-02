@@ -27,6 +27,7 @@ define('KEY_MASTER_HOST', 'master_host');
 define('KEY_MASTER_PORT', 'master_port');
 define('KEY_MASTER_SOCKET', 'master_socket');
 define('KEY_NOW_RUNNING_SOCKET', 'now_running_socket');
+define('KEY_NOW_IN_JOB_SOCKETS', 'now_in_job_sockets');
 
 function makeSelfListeningSocket() {
     $port = intval(Config::getString(KEY_SELF_PORT));
@@ -114,7 +115,12 @@ while (true) {
     }
 
     $infos = [];
+    $inJobSockets = Config::getArray(KEY_NOW_IN_JOB_SOCKETS);
     foreach ($socketPool as $index => $socket) {
+        if ( isset($inJobSockets[ strval($socket) ]) ) {
+            continue;
+        }
+
         $inputStr = socket_read($socket, 1024);
         if (!empty($inputStr)) {
             $infos[] = [$inputStr, $socket];
