@@ -8,7 +8,7 @@ use app\KeyValues;
 use app\Redis\Datas\StreamData;
 use app\Redis\libs\Encoder;
 
-class XreadCommand {
+class XreadCommand implements CommandInterface {
     public static function execute(array $params): ?string {
         return  self::handleSubCommands($params[0], array_slice($params, 1));        
     }

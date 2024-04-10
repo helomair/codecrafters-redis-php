@@ -6,7 +6,7 @@ use app\Config;
 use app\Redis\libs\Encoder;
 use app\KeyValues;
 
-class SetCommand {
+class SetCommand implements CommandInterface {
     public static function execute(array $params): string {
         // ! Race condition?
         $key = $params[0];

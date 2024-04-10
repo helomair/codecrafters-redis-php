@@ -5,7 +5,7 @@ namespace app\Redis\Commands;
 use app\Config;
 use app\Redis\libs\Encoder;
 
-class ConfigCommand {
+class ConfigCommand implements CommandInterface {
     public static function execute(array $params): string {
         $subCommand = strtoupper($params[0]);
 

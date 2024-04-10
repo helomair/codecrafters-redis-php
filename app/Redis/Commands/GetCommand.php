@@ -6,7 +6,7 @@ use app\Config;
 use app\Redis\libs\Encoder;
 use app\KeyValues;
 
-class GetCommand {
+class GetCommand implements CommandInterface {
     public static function execute(array $params): string {
         $dataSet = KeyValues::get($params[0]);
         

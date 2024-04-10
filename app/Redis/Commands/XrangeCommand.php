@@ -5,7 +5,7 @@ namespace app\Redis\Commands;
 use app\KeyValues;
 use app\Redis\libs\Encoder;
 
-class XrangeCommand {
+class XrangeCommand implements CommandInterface {
     public static function execute(array $params): string {
         $key = $params[0];
         $streamData = KeyValues::getStreamData($key);

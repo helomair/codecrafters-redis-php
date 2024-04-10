@@ -12,5 +12,6 @@ spl_autoload_register(function ($namespace) {
 
     $path = (empty($path)) ? "$className.php" : $path . DIRECTORY_SEPARATOR . "$className.php";
 
-    require_once $path;
+    if (file_exists($path))
+        require_once $path;
 });

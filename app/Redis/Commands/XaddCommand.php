@@ -6,7 +6,7 @@ use app\KeyValues;
 use app\Redis\libs\Encoder;
 use app\Redis\Datas\StreamData;
 
-class XaddCommand {
+class XaddCommand implements CommandInterface {
     public static function execute(array $params): string {
         $key = $params[0];
         $id  = $params[1];

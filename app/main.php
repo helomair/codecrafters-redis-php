@@ -54,13 +54,6 @@ function makeSelfListeningSocket() {
     return $socket;
 }
 
-function sendResponses(array $responses, $socket) {
-    foreach($responses as $response) {
-        foreach ($response as $text)
-            socket_write($socket, $text);
-    }
-}
-
 
 
 # Default
@@ -130,11 +123,15 @@ while (true) {
         $inputStr = $inputStrAndSocket[0];
         $socket = $inputStrAndSocket[1];
         Config::setSocket(KEY_NOW_RUNNING_SOCKET, $socket);
-        $responses = $redis->handle($inputStr);
+        $response = $redis->handle($inputStr);
         // KeyValues::getAll();
 
-        if (!is_null($responses)) {
-            sendResponses($responses, $socket);
+        if (is_null($response)) {
+            continue;
+        }
+
+        foreach ($response as $text) {
+            socket_write($socket, $text);
         }
     }
 

@@ -7,7 +7,7 @@ use app\Helpers;
 use app\KeyValues;
 use app\Redis\libs\Encoder;
 
-class ReplconfCommand {
+class ReplconfCommand implements CommandInterface {
     public static function execute(array $params): string {
         $ret = Encoder::encodeSimpleString("OK");
 

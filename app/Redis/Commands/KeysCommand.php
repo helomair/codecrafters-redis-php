@@ -6,7 +6,7 @@ use app\Config;
 use app\Redis\libs\Encoder;
 use app\KeyValues;
 
-class KeysCommand {
+class KeysCommand implements CommandInterface {
     public static function execute(array $params): string {
         $ret = null;
 

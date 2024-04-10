@@ -7,7 +7,7 @@ use app\Config;
 use app\JobQueue;
 use app\Redis\libs\Encoder;
 
-class WaitCommand {
+class WaitCommand implements CommandInterface {
     public static function execute(array $params): ?string {
         $slaveConns = Config::getArray(KEY_REPLICA_CONNS);
         $dones = self::contactSlavesAndGetDones();

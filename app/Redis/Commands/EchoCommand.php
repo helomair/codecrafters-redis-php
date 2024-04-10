@@ -6,7 +6,7 @@ use app\Config;
 use app\Redis\libs\Encoder;
 use app\KeyValues;
 
-class EchoCommand {
+class EchoCommand implements CommandInterface {
     public static function execute(array $params): string {
         $echoStr = $params[0];
         return Encoder::encodeSimpleString($echoStr);

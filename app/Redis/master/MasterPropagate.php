@@ -6,7 +6,7 @@ use app\Config;
 use app\Redis\libs\Encoder;
 
 class MasterPropagate {
-    private const WRITE_COMMANDS = ['SET', 'DEL'];
+    private const WRITE_COMMANDS = ['Set', 'Del'];
     
     public static function sendParamsToSlave(string $command, array $params) {
         if (!Config::isMaster()) return;
